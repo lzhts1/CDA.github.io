@@ -1,0 +1,4168 @@
+{
+  "schema_version": 1,
+  "mode": "static",
+  "is_live": false,
+  "default_model": "deepseek-flash",
+  "learning": {
+    "sample_count": 20,
+    "rules_count": 12,
+    "rules": [
+      {
+        "id": "规则001",
+        "table": "incident",
+        "trigger_field": "short_description",
+        "trigger_op": "changes",
+        "effect_table": "incident",
+        "effect_field": "state",
+        "effect_kind": "constant",
+        "effect_value": "1",
+        "confidence": 0.5
+      },
+      {
+        "id": "规则002",
+        "table": "sys_user",
+        "trigger_field": "first_name",
+        "trigger_op": "changes",
+        "effect_table": "sys_user",
+        "effect_field": "name",
+        "effect_kind": "computed",
+        "confidence": 0.7,
+        "effect_formula": {
+          "op": "add",
+          "inputs": [
+            "first_name",
+            "last_name"
+          ]
+        }
+      },
+      {
+        "id": "规则003",
+        "table": "sys_user",
+        "trigger_field": "email",
+        "trigger_op": "changes",
+        "effect_table": "cmn_notif_device",
+        "effect_field": "type",
+        "effect_kind": "constant",
+        "effect_value": "Email",
+        "confidence": 0.5
+      },
+      {
+        "id": "规则004",
+        "table": "incident",
+        "trigger_field": "assigned_to",
+        "trigger_op": "changes",
+        "effect_table": "incident",
+        "effect_field": "state",
+        "effect_kind": "constant",
+        "effect_value": "2",
+        "confidence": 0.7
+      },
+      {
+        "id": "规则005",
+        "table": "incident",
+        "trigger_field": "work_notes",
+        "trigger_op": "changes",
+        "effect_table": "cmn_notif_message",
+        "effect_field": "name",
+        "effect_kind": "constant",
+        "effect_value": "Incident worknoted for ITIL",
+        "confidence": 0.4,
+        "additional_triggers": [
+          {
+            "field": "assigned_to",
+            "op": "changes",
+            "value": "记录001"
+          }
+        ]
+      },
+      {
+        "id": "规则006",
+        "table": "incident",
+        "trigger_field": "state",
+        "trigger_op": "changes_to",
+        "effect_table": "incident",
+        "effect_field": "incident_state",
+        "effect_kind": "constant",
+        "trigger_value": "6",
+        "effect_value": "6",
+        "confidence": 0.8
+      },
+      {
+        "id": "规则007",
+        "table": "incident",
+        "trigger_field": "state",
+        "trigger_op": "changes_to",
+        "effect_table": "task_sla",
+        "effect_field": "stage",
+        "effect_kind": "constant",
+        "trigger_value": "6",
+        "effect_value": "paused",
+        "confidence": 0.7
+      },
+      {
+        "id": "规则008",
+        "table": "incident",
+        "trigger_field": "impact",
+        "trigger_op": "changes",
+        "effect_table": "incident",
+        "effect_field": "priority",
+        "effect_kind": "lookup",
+        "confidence": 0.7,
+        "effect_lookup": {
+          "inputs": [
+            "impact",
+            "urgency"
+          ],
+          "table": {
+            "1_1": "1",
+            "2_2": "3",
+            "3_3": "5"
+          }
+        }
+      },
+      {
+        "id": "规则009",
+        "table": "incident",
+        "trigger_field": "assigned_to",
+        "trigger_op": "changes",
+        "effect_table": "cmn_notif_message",
+        "effect_field": "name",
+        "effect_kind": "constant",
+        "effect_value": "Incident assigned to me",
+        "confidence": 0.6
+      },
+      {
+        "id": "规则010",
+        "table": "sys_user",
+        "trigger_field": "location",
+        "trigger_op": "changes",
+        "effect_table": "sys_user",
+        "effect_field": "location",
+        "effect_kind": "transform",
+        "confidence": 0.3,
+        "effect_transform": {
+          "op": "prepend",
+          "text": ""
+        }
+      },
+      {
+        "id": "规则011",
+        "table": "incident",
+        "trigger_field": "impact",
+        "trigger_op": "changes_to",
+        "effect_table": "problem",
+        "effect_field": "priority",
+        "effect_kind": "constant",
+        "trigger_value": "1",
+        "effect_value": "1",
+        "confidence": 0.6,
+        "additional_triggers": [
+          {
+            "field": "urgency",
+            "op": "changes_to",
+            "value": "1"
+          }
+        ]
+      },
+      {
+        "id": "规则012",
+        "table": "incident",
+        "trigger_field": "impact",
+        "trigger_op": "changes_to",
+        "effect_table": "problem",
+        "effect_field": "state",
+        "effect_kind": "constant",
+        "trigger_value": "1",
+        "effect_value": "101",
+        "confidence": 0.5,
+        "additional_triggers": [
+          {
+            "field": "urgency",
+            "op": "changes_to",
+            "value": "1"
+          }
+        ]
+      }
+    ]
+  },
+  "models": [
+    {
+      "id": "deepseek-flash",
+      "label": "DeepSeek V4.1 Flash 1017",
+      "examples": [
+        {
+          "id": "create",
+          "title": "创建工单",
+          "tool_name": "create_incident",
+          "parameters": {
+            "description": "The server is down and we are unable to access the production environment",
+            "impact": "1",
+            "short_description": "Server outage in production environment",
+            "urgency": "1"
+          },
+          "action": {
+            "table": "incident",
+            "operation": "insert",
+            "fields": {
+              "description": "The server is down and we are unable to access the production environment",
+              "impact": "1",
+              "short_description": "Server outage in production environment",
+              "urgency": "1"
+            }
+          },
+          "prediction": {
+            "changes": [
+              {
+                "table": "incident",
+                "field": "priority",
+                "old_value": null,
+                "value": "1"
+              }
+            ],
+            "seconds": 1.062
+          },
+          "actual": {
+            "changes": [
+              {
+                "table": "metric_instance",
+                "field": "calculation_complete",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录002"
+              },
+              {
+                "table": "metric_instance",
+                "field": "calculation_complete",
+                "old_value": "",
+                "value": "1",
+                "record_id": "记录003"
+              },
+              {
+                "table": "metric_instance",
+                "field": "table",
+                "old_value": "",
+                "value": "incident",
+                "record_id": "记录004"
+              },
+              {
+                "table": "metric_instance",
+                "field": "value",
+                "old_value": "",
+                "value": "false",
+                "record_id": "记录003"
+              },
+              {
+                "table": "metric_instance",
+                "field": "field_value",
+                "old_value": "",
+                "value": "1",
+                "record_id": "记录004"
+              },
+              {
+                "table": "metric_instance",
+                "field": "id",
+                "old_value": "",
+                "value": "记录005",
+                "record_id": "记录002"
+              },
+              {
+                "table": "metric_instance",
+                "field": "start",
+                "old_value": "",
+                "value": "2025-09-30 15:48:52",
+                "record_id": "记录002"
+              },
+              {
+                "table": "metric_instance",
+                "field": "value",
+                "old_value": "",
+                "value": "New",
+                "record_id": "记录004"
+              },
+              {
+                "table": "metric_instance",
+                "field": "id",
+                "old_value": "",
+                "value": "记录005",
+                "record_id": "记录003"
+              },
+              {
+                "table": "metric_instance",
+                "field": "field",
+                "old_value": "",
+                "value": "incident_state",
+                "record_id": "记录004"
+              },
+              {
+                "table": "metric_instance",
+                "field": "definition",
+                "old_value": "",
+                "value": "记录006",
+                "record_id": "记录002"
+              },
+              {
+                "table": "metric_instance",
+                "field": "id",
+                "old_value": "",
+                "value": "记录005",
+                "record_id": "记录004"
+              },
+              {
+                "table": "metric_instance",
+                "field": "table",
+                "old_value": "",
+                "value": "incident",
+                "record_id": "记录002"
+              },
+              {
+                "table": "metric_instance",
+                "field": "definition",
+                "old_value": "",
+                "value": "记录007",
+                "record_id": "记录003"
+              },
+              {
+                "table": "metric_instance",
+                "field": "calculation_complete",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录004"
+              },
+              {
+                "table": "metric_instance",
+                "field": "field_value",
+                "old_value": "",
+                "value": "true",
+                "record_id": "记录002"
+              },
+              {
+                "table": "metric_instance",
+                "field": "table",
+                "old_value": "",
+                "value": "incident",
+                "record_id": "记录003"
+              },
+              {
+                "table": "metric_instance",
+                "field": "definition",
+                "old_value": "",
+                "value": "记录008",
+                "record_id": "记录004"
+              },
+              {
+                "table": "metric_instance",
+                "field": "value",
+                "old_value": "",
+                "value": "true",
+                "record_id": "记录002"
+              },
+              {
+                "table": "metric_instance",
+                "field": "field_value",
+                "old_value": "",
+                "value": "false",
+                "record_id": "记录003"
+              },
+              {
+                "table": "metric_instance",
+                "field": "start",
+                "old_value": "",
+                "value": "2025-09-30 15:48:52",
+                "record_id": "记录004"
+              },
+              {
+                "table": "metric_instance",
+                "field": "field",
+                "old_value": "",
+                "value": "active",
+                "record_id": "记录002"
+              },
+              {
+                "table": "task_sla",
+                "field": "time_left",
+                "old_value": "1970-01-01 01:00:00",
+                "value": "1970-01-01 00:59:59",
+                "record_id": "记录009"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "business_duration",
+                "old_value": "1970-01-01 00:00:00",
+                "value": "1970-01-01 00:00:01",
+                "record_id": "记录010"
+              },
+              {
+                "table": "task_sla",
+                "field": "duration",
+                "old_value": "1970-01-01 00:00:00",
+                "value": "1970-01-01 00:00:01",
+                "record_id": "记录009"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "last_updated",
+                "old_value": "2025-09-30 15:48:52",
+                "value": "2025-09-30 15:48:53",
+                "record_id": "记录010"
+              },
+              {
+                "table": "task_sla",
+                "field": "business_duration",
+                "old_value": "1970-01-01 00:00:00",
+                "value": "1970-01-01 00:00:01",
+                "record_id": "记录009"
+              },
+              {
+                "table": "task_sla",
+                "field": "business_time_left",
+                "old_value": "1970-01-01 01:00:00",
+                "value": "1970-01-01 00:59:59",
+                "record_id": "记录009"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "duration",
+                "old_value": "1970-01-01 00:00:00",
+                "value": "1970-01-01 00:00:01",
+                "record_id": "记录010"
+              },
+              {
+                "table": "task_sla",
+                "field": "business_percentage",
+                "old_value": "0",
+                "value": "0.03",
+                "record_id": "记录009"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "sla_duration_percentage",
+                "old_value": "0",
+                "value": "0.03",
+                "record_id": "记录010"
+              },
+              {
+                "table": "task_sla",
+                "field": "percentage",
+                "old_value": "0",
+                "value": "0.03",
+                "record_id": "记录009"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "post_breach",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录010"
+              },
+              {
+                "table": "task_sla",
+                "field": "task",
+                "old_value": "",
+                "value": "记录005",
+                "record_id": "记录009"
+              },
+              {
+                "table": "task_sla",
+                "field": "sla",
+                "old_value": "",
+                "value": "记录011",
+                "record_id": "记录009"
+              },
+              {
+                "table": "incident",
+                "field": "active",
+                "old_value": "",
+                "value": "1",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "task_sla",
+                "old_value": "",
+                "value": "记录009",
+                "record_id": "记录010"
+              },
+              {
+                "table": "task_sla",
+                "field": "percentage",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录009"
+              },
+              {
+                "table": "incident",
+                "field": "sys_domain",
+                "old_value": "",
+                "value": "global",
+                "record_id": "记录005"
+              },
+              {
+                "table": "incident",
+                "field": "number",
+                "old_value": "",
+                "value": "工单001",
+                "record_id": "记录005"
+              },
+              {
+                "table": "task_sla",
+                "field": "timezone",
+                "old_value": "",
+                "value": "America/Los_Angeles",
+                "record_id": "记录009"
+              },
+              {
+                "table": "incident",
+                "field": "made_sla",
+                "old_value": "",
+                "value": "1",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "start",
+                "old_value": "",
+                "value": "2025-09-30 15:48:52",
+                "record_id": "记录010"
+              },
+              {
+                "table": "task_sla",
+                "field": "stage",
+                "old_value": "",
+                "value": "in_progress",
+                "record_id": "记录009"
+              },
+              {
+                "table": "incident",
+                "field": "reopen_count",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录005"
+              },
+              {
+                "table": "incident",
+                "field": "sys_class_name",
+                "old_value": "",
+                "value": "incident",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "duration",
+                "old_value": "",
+                "value": "1970-01-01 00:00:00",
+                "record_id": "记录010"
+              },
+              {
+                "table": "task_sla",
+                "field": "start_time",
+                "old_value": "",
+                "value": "2025-09-30 15:48:52",
+                "record_id": "记录009"
+              },
+              {
+                "table": "task_sla",
+                "field": "active",
+                "old_value": "",
+                "value": "1",
+                "record_id": "记录009"
+              },
+              {
+                "table": "incident",
+                "field": "incident_state",
+                "old_value": "",
+                "value": "1",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "retroactive",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录010"
+              },
+              {
+                "table": "task_sla",
+                "field": "time_left",
+                "old_value": "",
+                "value": "1970-01-01 01:00:00",
+                "record_id": "记录009"
+              },
+              {
+                "table": "incident",
+                "field": "opened_by",
+                "old_value": "",
+                "value": "记录012",
+                "record_id": "记录005"
+              },
+              {
+                "table": "incident",
+                "field": "upon_reject",
+                "old_value": "",
+                "value": "cancel",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "task",
+                "old_value": "",
+                "value": "记录005",
+                "record_id": "记录010"
+              },
+              {
+                "table": "incident",
+                "field": "upon_approval",
+                "old_value": "",
+                "value": "proceed",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "breached",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录010"
+              },
+              {
+                "table": "task_sla",
+                "field": "business_duration",
+                "old_value": "",
+                "value": "1970-01-01 00:00:00",
+                "record_id": "记录009"
+              },
+              {
+                "table": "incident",
+                "field": "approval",
+                "old_value": "",
+                "value": "not requested",
+                "record_id": "记录005"
+              },
+              {
+                "table": "incident",
+                "field": "notify",
+                "old_value": "",
+                "value": "1",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "sla_duration_percentage",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录010"
+              },
+              {
+                "table": "task_sla",
+                "field": "business_percentage",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录009"
+              },
+              {
+                "table": "incident",
+                "field": "knowledge",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "business_duration",
+                "old_value": "",
+                "value": "1970-01-01 00:00:00",
+                "record_id": "记录010"
+              },
+              {
+                "table": "task_sla",
+                "field": "duration",
+                "old_value": "",
+                "value": "1970-01-01 00:00:00",
+                "record_id": "记录009"
+              },
+              {
+                "table": "incident",
+                "field": "task_effective_number",
+                "old_value": "",
+                "value": "工单001",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "business_pause_duration",
+                "old_value": "",
+                "value": "1970-01-01 00:00:00",
+                "record_id": "记录010"
+              },
+              {
+                "table": "task_sla",
+                "field": "has_breached",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录009"
+              },
+              {
+                "table": "incident",
+                "field": "escalation",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "last_updated",
+                "old_value": "",
+                "value": "2025-09-30 15:48:52",
+                "record_id": "记录010"
+              },
+              {
+                "table": "incident",
+                "field": "severity",
+                "old_value": "",
+                "value": "3",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "pause_duration",
+                "old_value": "",
+                "value": "1970-01-01 00:00:00",
+                "record_id": "记录010"
+              },
+              {
+                "table": "task_sla",
+                "field": "original_breach_time",
+                "old_value": "",
+                "value": "2025-09-30 16:48:52",
+                "record_id": "记录009"
+              },
+              {
+                "table": "incident",
+                "field": "opened_at",
+                "old_value": "",
+                "value": "2025-09-30 15:48:52",
+                "record_id": "记录005"
+              },
+              {
+                "table": "incident",
+                "field": "state",
+                "old_value": "",
+                "value": "1",
+                "record_id": "记录005"
+              },
+              {
+                "table": "task_sla",
+                "field": "business_time_left",
+                "old_value": "",
+                "value": "1970-01-01 01:00:00",
+                "record_id": "记录009"
+              },
+              {
+                "table": "incident",
+                "field": "child_incidents",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "active",
+                "old_value": "",
+                "value": "1",
+                "record_id": "记录010"
+              },
+              {
+                "table": "task_sla",
+                "field": "planned_end_time",
+                "old_value": "",
+                "value": "2025-09-30 16:48:52",
+                "record_id": "记录009"
+              },
+              {
+                "table": "incident",
+                "field": "category",
+                "old_value": "",
+                "value": "inquiry",
+                "record_id": "记录005"
+              },
+              {
+                "table": "incident",
+                "field": "reassignment_count",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "sla_breakdown_definition",
+                "old_value": "",
+                "value": "记录013",
+                "record_id": "记录010"
+              },
+              {
+                "table": "incident",
+                "field": "activity_due",
+                "old_value": "",
+                "value": "2025-09-30 17:48:52",
+                "record_id": "记录005"
+              },
+              {
+                "table": "incident",
+                "field": "priority",
+                "old_value": "",
+                "value": "1",
+                "record_id": "记录005"
+              }
+            ]
+          },
+          "metrics": {
+            "precision": 1.0,
+            "recall": 0.01282051282051282,
+            "iou": 0.01282051282051282,
+            "true_positives": 1,
+            "predicted": 1,
+            "ground_truth": 78
+          }
+        },
+        {
+          "id": "assign",
+          "title": "分派工单",
+          "tool_name": "update_incident",
+          "parameters": {
+            "assigned_to": "记录001",
+            "incident_id": "记录005"
+          },
+          "action": {
+            "table": "incident",
+            "operation": "update",
+            "fields": {
+              "assigned_to": "记录001"
+            }
+          },
+          "prediction": {
+            "changes": [
+              {
+                "table": "incident",
+                "field": "state",
+                "old_value": "1",
+                "value": "2",
+                "record_id": "记录005"
+              },
+              {
+                "table": "task_sla",
+                "field": "stage",
+                "old_value": "in_progress",
+                "value": "paused",
+                "record_id": "记录009"
+              }
+            ],
+            "seconds": 1.797
+          },
+          "actual": {
+            "changes": [
+              {
+                "table": "metric_instance",
+                "field": "table",
+                "old_value": "",
+                "value": "incident",
+                "record_id": "记录014"
+              },
+              {
+                "table": "metric_instance",
+                "field": "value",
+                "old_value": "",
+                "value": "In Progress",
+                "record_id": "记录015"
+              },
+              {
+                "table": "metric_instance",
+                "field": "duration",
+                "old_value": "",
+                "value": "1970-01-01 00:03:11",
+                "record_id": "记录004"
+              },
+              {
+                "table": "metric_instance",
+                "field": "field_value",
+                "old_value": "",
+                "value": "记录001",
+                "record_id": "记录014"
+              },
+              {
+                "table": "metric_instance",
+                "field": "field",
+                "old_value": "",
+                "value": "incident_state",
+                "record_id": "记录015"
+              },
+              {
+                "table": "metric_instance",
+                "field": "value",
+                "old_value": "",
+                "value": "人员001",
+                "record_id": "记录014"
+              },
+              {
+                "table": "metric_instance",
+                "field": "id",
+                "old_value": "",
+                "value": "记录005",
+                "record_id": "记录015"
+              },
+              {
+                "table": "metric_instance",
+                "field": "calculation_complete",
+                "old_value": "0",
+                "value": "1",
+                "record_id": "记录004"
+              },
+              {
+                "table": "metric_instance",
+                "field": "field",
+                "old_value": "",
+                "value": "assigned_to",
+                "record_id": "记录014"
+              },
+              {
+                "table": "metric_instance",
+                "field": "calculation_complete",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录015"
+              },
+              {
+                "table": "metric_instance",
+                "field": "id",
+                "old_value": "",
+                "value": "记录005",
+                "record_id": "记录014"
+              },
+              {
+                "table": "metric_instance",
+                "field": "definition",
+                "old_value": "",
+                "value": "记录008",
+                "record_id": "记录015"
+              },
+              {
+                "table": "metric_instance",
+                "field": "calculation_complete",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录014"
+              },
+              {
+                "table": "metric_instance",
+                "field": "start",
+                "old_value": "",
+                "value": "2025-09-30 15:52:03",
+                "record_id": "记录015"
+              },
+              {
+                "table": "metric_instance",
+                "field": "table",
+                "old_value": "",
+                "value": "incident",
+                "record_id": "记录015"
+              },
+              {
+                "table": "metric_instance",
+                "field": "end",
+                "old_value": "",
+                "value": "2025-09-30 15:52:03",
+                "record_id": "记录004"
+              },
+              {
+                "table": "metric_instance",
+                "field": "definition",
+                "old_value": "",
+                "value": "记录016",
+                "record_id": "记录014"
+              },
+              {
+                "table": "metric_instance",
+                "field": "field_value",
+                "old_value": "",
+                "value": "2",
+                "record_id": "记录015"
+              },
+              {
+                "table": "metric_instance",
+                "field": "start",
+                "old_value": "",
+                "value": "2025-09-30 15:52:03",
+                "record_id": "记录014"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "assigned_to",
+                "old_value": "",
+                "value": "记录001",
+                "record_id": "记录017"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "sla_duration_percentage",
+                "old_value": "0.03",
+                "value": "5.31",
+                "record_id": "记录010"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "start",
+                "old_value": "",
+                "value": "2025-09-30 15:52:03",
+                "record_id": "记录017"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "active",
+                "old_value": "1",
+                "value": "0",
+                "record_id": "记录010"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "post_breach",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录017"
+              },
+              {
+                "table": "incident",
+                "field": "state",
+                "old_value": "1",
+                "value": "2",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "breached",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录017"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "last_updated",
+                "old_value": "2025-09-30 15:48:53",
+                "value": "2025-09-30 15:52:03",
+                "record_id": "记录010"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "sla_duration_percentage",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录017"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "task_sla",
+                "old_value": "",
+                "value": "记录009",
+                "record_id": "记录017"
+              },
+              {
+                "table": "incident",
+                "field": "activity_due",
+                "old_value": "2025-09-30 17:48:52",
+                "value": "2025-09-30 17:52:03",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "task",
+                "old_value": "",
+                "value": "记录005",
+                "record_id": "记录017"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "last_updated",
+                "old_value": "",
+                "value": "2025-09-30 15:52:03",
+                "record_id": "记录017"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "end",
+                "old_value": "",
+                "value": "2025-09-30 15:52:03",
+                "record_id": "记录010"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "retroactive",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录017"
+              },
+              {
+                "table": "incident",
+                "field": "incident_state",
+                "old_value": "1",
+                "value": "2",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "active",
+                "old_value": "",
+                "value": "1",
+                "record_id": "记录017"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "business_duration",
+                "old_value": "1970-01-01 00:00:01",
+                "value": "1970-01-01 00:03:11",
+                "record_id": "记录010"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "sla_breakdown_definition",
+                "old_value": "",
+                "value": "记录013",
+                "record_id": "记录017"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "duration",
+                "old_value": "1970-01-01 00:00:01",
+                "value": "1970-01-01 00:03:11",
+                "record_id": "记录010"
+              }
+            ]
+          },
+          "metrics": {
+            "precision": 0.5,
+            "recall": 0.029411764705882353,
+            "iou": 0.02857142857142857,
+            "true_positives": 1,
+            "predicted": 2,
+            "ground_truth": 34
+          }
+        },
+        {
+          "id": "resolve",
+          "title": "解决工单",
+          "tool_name": "resolve_incident",
+          "parameters": {
+            "incident_id": "记录005",
+            "resolution_code": "Resolved by caller",
+            "resolution_notes": "Power is restored"
+          },
+          "action": {
+            "table": "incident",
+            "operation": "update",
+            "fields": {
+              "close_code": "Resolved by caller",
+              "close_notes": "Power is restored",
+              "state": "6"
+            }
+          },
+          "prediction": {
+            "changes": [
+              {
+                "table": "incident",
+                "field": "incident_state",
+                "old_value": "2",
+                "value": "6",
+                "record_id": "记录005"
+              },
+              {
+                "table": "task_sla",
+                "field": "stage",
+                "old_value": "in_progress",
+                "value": "paused",
+                "record_id": "记录009"
+              }
+            ],
+            "seconds": 1.5
+          },
+          "actual": {
+            "changes": [
+              {
+                "table": "metric_instance",
+                "field": "duration",
+                "old_value": "",
+                "value": "1970-01-01 00:06:54",
+                "record_id": "记录015"
+              },
+              {
+                "table": "metric_instance",
+                "field": "start",
+                "old_value": "",
+                "value": "2025-09-30 15:48:52",
+                "record_id": "记录018"
+              },
+              {
+                "table": "metric_instance",
+                "field": "definition",
+                "old_value": "",
+                "value": "记录008",
+                "record_id": "记录019"
+              },
+              {
+                "table": "metric_instance",
+                "field": "start",
+                "old_value": "",
+                "value": "2025-09-30 15:58:57",
+                "record_id": "记录019"
+              },
+              {
+                "table": "metric_instance",
+                "field": "definition",
+                "old_value": "",
+                "value": "记录020",
+                "record_id": "记录018"
+              },
+              {
+                "table": "metric_instance",
+                "field": "table",
+                "old_value": "",
+                "value": "incident",
+                "record_id": "记录019"
+              },
+              {
+                "table": "metric_instance",
+                "field": "calculation_complete",
+                "old_value": "0",
+                "value": "1",
+                "record_id": "记录015"
+              },
+              {
+                "table": "metric_instance",
+                "field": "field_value",
+                "old_value": "",
+                "value": "6",
+                "record_id": "记录019"
+              },
+              {
+                "table": "metric_instance",
+                "field": "table",
+                "old_value": "",
+                "value": "incident",
+                "record_id": "记录018"
+              },
+              {
+                "table": "metric_instance",
+                "field": "field",
+                "old_value": "",
+                "value": "incident_state",
+                "record_id": "记录018"
+              },
+              {
+                "table": "metric_instance",
+                "field": "value",
+                "old_value": "",
+                "value": "Resolved",
+                "record_id": "记录019"
+              },
+              {
+                "table": "metric_instance",
+                "field": "field",
+                "old_value": "",
+                "value": "incident_state",
+                "record_id": "记录019"
+              },
+              {
+                "table": "metric_instance",
+                "field": "id",
+                "old_value": "",
+                "value": "记录005",
+                "record_id": "记录018"
+              },
+              {
+                "table": "metric_instance",
+                "field": "duration",
+                "old_value": "",
+                "value": "1970-01-01 00:10:05",
+                "record_id": "记录018"
+              },
+              {
+                "table": "metric_instance",
+                "field": "id",
+                "old_value": "",
+                "value": "记录005",
+                "record_id": "记录019"
+              },
+              {
+                "table": "metric_instance",
+                "field": "calculation_complete",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录019"
+              },
+              {
+                "table": "metric_instance",
+                "field": "end",
+                "old_value": "",
+                "value": "2025-09-30 15:58:57",
+                "record_id": "记录018"
+              },
+              {
+                "table": "metric_instance",
+                "field": "end",
+                "old_value": "",
+                "value": "2025-09-30 15:58:57",
+                "record_id": "记录015"
+              },
+              {
+                "table": "metric_instance",
+                "field": "calculation_complete",
+                "old_value": "",
+                "value": "1",
+                "record_id": "记录018"
+              },
+              {
+                "table": "incident",
+                "field": "resolved_at",
+                "old_value": "",
+                "value": "2025-09-30 15:58:57",
+                "record_id": "记录005"
+              },
+              {
+                "table": "task_sla",
+                "field": "stage",
+                "old_value": "in_progress",
+                "value": "paused",
+                "record_id": "记录009"
+              },
+              {
+                "table": "incident",
+                "field": "business_stc",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "duration",
+                "old_value": "1970-01-01 00:02:57",
+                "value": "1970-01-01 00:06:54",
+                "record_id": "记录017"
+              },
+              {
+                "table": "task_sla",
+                "field": "time_left",
+                "old_value": "1970-01-01 00:53:52",
+                "value": "1970-01-01 00:49:55",
+                "record_id": "记录009"
+              },
+              {
+                "table": "incident",
+                "field": "calendar_stc",
+                "old_value": "",
+                "value": "605",
+                "record_id": "记录005"
+              },
+              {
+                "table": "task_sla",
+                "field": "business_duration",
+                "old_value": "1970-01-01 00:06:08",
+                "value": "1970-01-01 00:10:05",
+                "record_id": "记录009"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "pause_time",
+                "old_value": "",
+                "value": "2025-09-30 15:58:57",
+                "record_id": "记录017"
+              },
+              {
+                "table": "task_sla",
+                "field": "duration",
+                "old_value": "1970-01-01 00:06:08",
+                "value": "1970-01-01 00:10:05",
+                "record_id": "记录009"
+              },
+              {
+                "table": "incident",
+                "field": "incident_state",
+                "old_value": "2",
+                "value": "6",
+                "record_id": "记录005"
+              },
+              {
+                "table": "incident",
+                "field": "resolved_by",
+                "old_value": "",
+                "value": "记录012",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "business_duration",
+                "old_value": "1970-01-01 00:02:57",
+                "value": "1970-01-01 00:06:54",
+                "record_id": "记录017"
+              },
+              {
+                "table": "task_sla",
+                "field": "business_percentage",
+                "old_value": "10.22",
+                "value": "16.81",
+                "record_id": "记录009"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "sla_duration_percentage",
+                "old_value": "4.92",
+                "value": "11.5",
+                "record_id": "记录017"
+              },
+              {
+                "table": "task_sla",
+                "field": "business_time_left",
+                "old_value": "1970-01-01 00:53:52",
+                "value": "1970-01-01 00:49:55",
+                "record_id": "记录009"
+              },
+              {
+                "table": "incident",
+                "field": "business_duration",
+                "old_value": "",
+                "value": "1970-01-01 00:00:00",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "last_updated",
+                "old_value": "2025-09-30 15:55:00",
+                "value": "2025-09-30 15:58:57",
+                "record_id": "记录017"
+              },
+              {
+                "table": "task_sla",
+                "field": "percentage",
+                "old_value": "10.22",
+                "value": "16.81",
+                "record_id": "记录009"
+              },
+              {
+                "table": "task_sla",
+                "field": "pause_time",
+                "old_value": "",
+                "value": "2025-09-30 15:58:57",
+                "record_id": "记录009"
+              },
+              {
+                "table": "incident",
+                "field": "calendar_duration",
+                "old_value": "",
+                "value": "1970-01-01 00:10:05",
+                "record_id": "记录005"
+              }
+            ]
+          },
+          "metrics": {
+            "precision": 1.0,
+            "recall": 0.058823529411764705,
+            "iou": 0.058823529411764705,
+            "true_positives": 2,
+            "predicted": 2,
+            "ground_truth": 34
+          }
+        }
+      ]
+    },
+    {
+      "id": "deepseek-v4-pro",
+      "label": "DeepSeek V4 Pro",
+      "examples": [
+        {
+          "id": "create",
+          "title": "创建工单",
+          "tool_name": "create_incident",
+          "parameters": {
+            "description": "The server is down and we are unable to access the production environment",
+            "impact": "1",
+            "short_description": "Server outage in production environment",
+            "urgency": "1"
+          },
+          "action": {
+            "table": "incident",
+            "operation": "insert",
+            "fields": {
+              "description": "The server is down and we are unable to access the production environment",
+              "impact": "1",
+              "short_description": "Server outage in production environment",
+              "urgency": "1"
+            }
+          },
+          "prediction": {
+            "changes": [
+              {
+                "table": "incident",
+                "field": "priority",
+                "old_value": null,
+                "value": "1"
+              }
+            ],
+            "seconds": 1.891
+          },
+          "actual": {
+            "changes": [
+              {
+                "table": "metric_instance",
+                "field": "calculation_complete",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录002"
+              },
+              {
+                "table": "metric_instance",
+                "field": "calculation_complete",
+                "old_value": "",
+                "value": "1",
+                "record_id": "记录003"
+              },
+              {
+                "table": "metric_instance",
+                "field": "table",
+                "old_value": "",
+                "value": "incident",
+                "record_id": "记录004"
+              },
+              {
+                "table": "metric_instance",
+                "field": "value",
+                "old_value": "",
+                "value": "false",
+                "record_id": "记录003"
+              },
+              {
+                "table": "metric_instance",
+                "field": "field_value",
+                "old_value": "",
+                "value": "1",
+                "record_id": "记录004"
+              },
+              {
+                "table": "metric_instance",
+                "field": "id",
+                "old_value": "",
+                "value": "记录005",
+                "record_id": "记录002"
+              },
+              {
+                "table": "metric_instance",
+                "field": "start",
+                "old_value": "",
+                "value": "2025-09-30 15:48:52",
+                "record_id": "记录002"
+              },
+              {
+                "table": "metric_instance",
+                "field": "value",
+                "old_value": "",
+                "value": "New",
+                "record_id": "记录004"
+              },
+              {
+                "table": "metric_instance",
+                "field": "id",
+                "old_value": "",
+                "value": "记录005",
+                "record_id": "记录003"
+              },
+              {
+                "table": "metric_instance",
+                "field": "field",
+                "old_value": "",
+                "value": "incident_state",
+                "record_id": "记录004"
+              },
+              {
+                "table": "metric_instance",
+                "field": "definition",
+                "old_value": "",
+                "value": "记录006",
+                "record_id": "记录002"
+              },
+              {
+                "table": "metric_instance",
+                "field": "id",
+                "old_value": "",
+                "value": "记录005",
+                "record_id": "记录004"
+              },
+              {
+                "table": "metric_instance",
+                "field": "table",
+                "old_value": "",
+                "value": "incident",
+                "record_id": "记录002"
+              },
+              {
+                "table": "metric_instance",
+                "field": "definition",
+                "old_value": "",
+                "value": "记录007",
+                "record_id": "记录003"
+              },
+              {
+                "table": "metric_instance",
+                "field": "calculation_complete",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录004"
+              },
+              {
+                "table": "metric_instance",
+                "field": "field_value",
+                "old_value": "",
+                "value": "true",
+                "record_id": "记录002"
+              },
+              {
+                "table": "metric_instance",
+                "field": "table",
+                "old_value": "",
+                "value": "incident",
+                "record_id": "记录003"
+              },
+              {
+                "table": "metric_instance",
+                "field": "definition",
+                "old_value": "",
+                "value": "记录008",
+                "record_id": "记录004"
+              },
+              {
+                "table": "metric_instance",
+                "field": "value",
+                "old_value": "",
+                "value": "true",
+                "record_id": "记录002"
+              },
+              {
+                "table": "metric_instance",
+                "field": "field_value",
+                "old_value": "",
+                "value": "false",
+                "record_id": "记录003"
+              },
+              {
+                "table": "metric_instance",
+                "field": "start",
+                "old_value": "",
+                "value": "2025-09-30 15:48:52",
+                "record_id": "记录004"
+              },
+              {
+                "table": "metric_instance",
+                "field": "field",
+                "old_value": "",
+                "value": "active",
+                "record_id": "记录002"
+              },
+              {
+                "table": "task_sla",
+                "field": "time_left",
+                "old_value": "1970-01-01 01:00:00",
+                "value": "1970-01-01 00:59:59",
+                "record_id": "记录009"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "business_duration",
+                "old_value": "1970-01-01 00:00:00",
+                "value": "1970-01-01 00:00:01",
+                "record_id": "记录010"
+              },
+              {
+                "table": "task_sla",
+                "field": "duration",
+                "old_value": "1970-01-01 00:00:00",
+                "value": "1970-01-01 00:00:01",
+                "record_id": "记录009"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "last_updated",
+                "old_value": "2025-09-30 15:48:52",
+                "value": "2025-09-30 15:48:53",
+                "record_id": "记录010"
+              },
+              {
+                "table": "task_sla",
+                "field": "business_duration",
+                "old_value": "1970-01-01 00:00:00",
+                "value": "1970-01-01 00:00:01",
+                "record_id": "记录009"
+              },
+              {
+                "table": "task_sla",
+                "field": "business_time_left",
+                "old_value": "1970-01-01 01:00:00",
+                "value": "1970-01-01 00:59:59",
+                "record_id": "记录009"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "duration",
+                "old_value": "1970-01-01 00:00:00",
+                "value": "1970-01-01 00:00:01",
+                "record_id": "记录010"
+              },
+              {
+                "table": "task_sla",
+                "field": "business_percentage",
+                "old_value": "0",
+                "value": "0.03",
+                "record_id": "记录009"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "sla_duration_percentage",
+                "old_value": "0",
+                "value": "0.03",
+                "record_id": "记录010"
+              },
+              {
+                "table": "task_sla",
+                "field": "percentage",
+                "old_value": "0",
+                "value": "0.03",
+                "record_id": "记录009"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "post_breach",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录010"
+              },
+              {
+                "table": "task_sla",
+                "field": "task",
+                "old_value": "",
+                "value": "记录005",
+                "record_id": "记录009"
+              },
+              {
+                "table": "task_sla",
+                "field": "sla",
+                "old_value": "",
+                "value": "记录011",
+                "record_id": "记录009"
+              },
+              {
+                "table": "incident",
+                "field": "active",
+                "old_value": "",
+                "value": "1",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "task_sla",
+                "old_value": "",
+                "value": "记录009",
+                "record_id": "记录010"
+              },
+              {
+                "table": "task_sla",
+                "field": "percentage",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录009"
+              },
+              {
+                "table": "incident",
+                "field": "sys_domain",
+                "old_value": "",
+                "value": "global",
+                "record_id": "记录005"
+              },
+              {
+                "table": "incident",
+                "field": "number",
+                "old_value": "",
+                "value": "工单001",
+                "record_id": "记录005"
+              },
+              {
+                "table": "task_sla",
+                "field": "timezone",
+                "old_value": "",
+                "value": "America/Los_Angeles",
+                "record_id": "记录009"
+              },
+              {
+                "table": "incident",
+                "field": "made_sla",
+                "old_value": "",
+                "value": "1",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "start",
+                "old_value": "",
+                "value": "2025-09-30 15:48:52",
+                "record_id": "记录010"
+              },
+              {
+                "table": "task_sla",
+                "field": "stage",
+                "old_value": "",
+                "value": "in_progress",
+                "record_id": "记录009"
+              },
+              {
+                "table": "incident",
+                "field": "reopen_count",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录005"
+              },
+              {
+                "table": "incident",
+                "field": "sys_class_name",
+                "old_value": "",
+                "value": "incident",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "duration",
+                "old_value": "",
+                "value": "1970-01-01 00:00:00",
+                "record_id": "记录010"
+              },
+              {
+                "table": "task_sla",
+                "field": "start_time",
+                "old_value": "",
+                "value": "2025-09-30 15:48:52",
+                "record_id": "记录009"
+              },
+              {
+                "table": "task_sla",
+                "field": "active",
+                "old_value": "",
+                "value": "1",
+                "record_id": "记录009"
+              },
+              {
+                "table": "incident",
+                "field": "incident_state",
+                "old_value": "",
+                "value": "1",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "retroactive",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录010"
+              },
+              {
+                "table": "task_sla",
+                "field": "time_left",
+                "old_value": "",
+                "value": "1970-01-01 01:00:00",
+                "record_id": "记录009"
+              },
+              {
+                "table": "incident",
+                "field": "opened_by",
+                "old_value": "",
+                "value": "记录012",
+                "record_id": "记录005"
+              },
+              {
+                "table": "incident",
+                "field": "upon_reject",
+                "old_value": "",
+                "value": "cancel",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "task",
+                "old_value": "",
+                "value": "记录005",
+                "record_id": "记录010"
+              },
+              {
+                "table": "incident",
+                "field": "upon_approval",
+                "old_value": "",
+                "value": "proceed",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "breached",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录010"
+              },
+              {
+                "table": "task_sla",
+                "field": "business_duration",
+                "old_value": "",
+                "value": "1970-01-01 00:00:00",
+                "record_id": "记录009"
+              },
+              {
+                "table": "incident",
+                "field": "approval",
+                "old_value": "",
+                "value": "not requested",
+                "record_id": "记录005"
+              },
+              {
+                "table": "incident",
+                "field": "notify",
+                "old_value": "",
+                "value": "1",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "sla_duration_percentage",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录010"
+              },
+              {
+                "table": "task_sla",
+                "field": "business_percentage",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录009"
+              },
+              {
+                "table": "incident",
+                "field": "knowledge",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "business_duration",
+                "old_value": "",
+                "value": "1970-01-01 00:00:00",
+                "record_id": "记录010"
+              },
+              {
+                "table": "task_sla",
+                "field": "duration",
+                "old_value": "",
+                "value": "1970-01-01 00:00:00",
+                "record_id": "记录009"
+              },
+              {
+                "table": "incident",
+                "field": "task_effective_number",
+                "old_value": "",
+                "value": "工单001",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "business_pause_duration",
+                "old_value": "",
+                "value": "1970-01-01 00:00:00",
+                "record_id": "记录010"
+              },
+              {
+                "table": "task_sla",
+                "field": "has_breached",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录009"
+              },
+              {
+                "table": "incident",
+                "field": "escalation",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "last_updated",
+                "old_value": "",
+                "value": "2025-09-30 15:48:52",
+                "record_id": "记录010"
+              },
+              {
+                "table": "incident",
+                "field": "severity",
+                "old_value": "",
+                "value": "3",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "pause_duration",
+                "old_value": "",
+                "value": "1970-01-01 00:00:00",
+                "record_id": "记录010"
+              },
+              {
+                "table": "task_sla",
+                "field": "original_breach_time",
+                "old_value": "",
+                "value": "2025-09-30 16:48:52",
+                "record_id": "记录009"
+              },
+              {
+                "table": "incident",
+                "field": "opened_at",
+                "old_value": "",
+                "value": "2025-09-30 15:48:52",
+                "record_id": "记录005"
+              },
+              {
+                "table": "incident",
+                "field": "state",
+                "old_value": "",
+                "value": "1",
+                "record_id": "记录005"
+              },
+              {
+                "table": "task_sla",
+                "field": "business_time_left",
+                "old_value": "",
+                "value": "1970-01-01 01:00:00",
+                "record_id": "记录009"
+              },
+              {
+                "table": "incident",
+                "field": "child_incidents",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "active",
+                "old_value": "",
+                "value": "1",
+                "record_id": "记录010"
+              },
+              {
+                "table": "task_sla",
+                "field": "planned_end_time",
+                "old_value": "",
+                "value": "2025-09-30 16:48:52",
+                "record_id": "记录009"
+              },
+              {
+                "table": "incident",
+                "field": "category",
+                "old_value": "",
+                "value": "inquiry",
+                "record_id": "记录005"
+              },
+              {
+                "table": "incident",
+                "field": "reassignment_count",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "sla_breakdown_definition",
+                "old_value": "",
+                "value": "记录013",
+                "record_id": "记录010"
+              },
+              {
+                "table": "incident",
+                "field": "activity_due",
+                "old_value": "",
+                "value": "2025-09-30 17:48:52",
+                "record_id": "记录005"
+              },
+              {
+                "table": "incident",
+                "field": "priority",
+                "old_value": "",
+                "value": "1",
+                "record_id": "记录005"
+              }
+            ]
+          },
+          "metrics": {
+            "precision": 1.0,
+            "recall": 0.01282051282051282,
+            "iou": 0.01282051282051282,
+            "true_positives": 1,
+            "predicted": 1,
+            "ground_truth": 78
+          }
+        },
+        {
+          "id": "assign",
+          "title": "分派工单",
+          "tool_name": "update_incident",
+          "parameters": {
+            "assigned_to": "记录001",
+            "incident_id": "记录005"
+          },
+          "action": {
+            "table": "incident",
+            "operation": "update",
+            "fields": {
+              "assigned_to": "记录001"
+            }
+          },
+          "prediction": {
+            "changes": [
+              {
+                "table": "incident",
+                "field": "state",
+                "old_value": "1",
+                "value": "2",
+                "record_id": "记录005"
+              },
+              {
+                "table": "cmn_notif_message",
+                "field": "name",
+                "old_value": null,
+                "value": "Incident assigned to me"
+              }
+            ],
+            "seconds": 2.813
+          },
+          "actual": {
+            "changes": [
+              {
+                "table": "metric_instance",
+                "field": "table",
+                "old_value": "",
+                "value": "incident",
+                "record_id": "记录014"
+              },
+              {
+                "table": "metric_instance",
+                "field": "value",
+                "old_value": "",
+                "value": "In Progress",
+                "record_id": "记录015"
+              },
+              {
+                "table": "metric_instance",
+                "field": "duration",
+                "old_value": "",
+                "value": "1970-01-01 00:03:11",
+                "record_id": "记录004"
+              },
+              {
+                "table": "metric_instance",
+                "field": "field_value",
+                "old_value": "",
+                "value": "记录001",
+                "record_id": "记录014"
+              },
+              {
+                "table": "metric_instance",
+                "field": "field",
+                "old_value": "",
+                "value": "incident_state",
+                "record_id": "记录015"
+              },
+              {
+                "table": "metric_instance",
+                "field": "value",
+                "old_value": "",
+                "value": "人员001",
+                "record_id": "记录014"
+              },
+              {
+                "table": "metric_instance",
+                "field": "id",
+                "old_value": "",
+                "value": "记录005",
+                "record_id": "记录015"
+              },
+              {
+                "table": "metric_instance",
+                "field": "calculation_complete",
+                "old_value": "0",
+                "value": "1",
+                "record_id": "记录004"
+              },
+              {
+                "table": "metric_instance",
+                "field": "field",
+                "old_value": "",
+                "value": "assigned_to",
+                "record_id": "记录014"
+              },
+              {
+                "table": "metric_instance",
+                "field": "calculation_complete",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录015"
+              },
+              {
+                "table": "metric_instance",
+                "field": "id",
+                "old_value": "",
+                "value": "记录005",
+                "record_id": "记录014"
+              },
+              {
+                "table": "metric_instance",
+                "field": "definition",
+                "old_value": "",
+                "value": "记录008",
+                "record_id": "记录015"
+              },
+              {
+                "table": "metric_instance",
+                "field": "calculation_complete",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录014"
+              },
+              {
+                "table": "metric_instance",
+                "field": "start",
+                "old_value": "",
+                "value": "2025-09-30 15:52:03",
+                "record_id": "记录015"
+              },
+              {
+                "table": "metric_instance",
+                "field": "table",
+                "old_value": "",
+                "value": "incident",
+                "record_id": "记录015"
+              },
+              {
+                "table": "metric_instance",
+                "field": "end",
+                "old_value": "",
+                "value": "2025-09-30 15:52:03",
+                "record_id": "记录004"
+              },
+              {
+                "table": "metric_instance",
+                "field": "definition",
+                "old_value": "",
+                "value": "记录016",
+                "record_id": "记录014"
+              },
+              {
+                "table": "metric_instance",
+                "field": "field_value",
+                "old_value": "",
+                "value": "2",
+                "record_id": "记录015"
+              },
+              {
+                "table": "metric_instance",
+                "field": "start",
+                "old_value": "",
+                "value": "2025-09-30 15:52:03",
+                "record_id": "记录014"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "assigned_to",
+                "old_value": "",
+                "value": "记录001",
+                "record_id": "记录017"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "sla_duration_percentage",
+                "old_value": "0.03",
+                "value": "5.31",
+                "record_id": "记录010"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "start",
+                "old_value": "",
+                "value": "2025-09-30 15:52:03",
+                "record_id": "记录017"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "active",
+                "old_value": "1",
+                "value": "0",
+                "record_id": "记录010"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "post_breach",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录017"
+              },
+              {
+                "table": "incident",
+                "field": "state",
+                "old_value": "1",
+                "value": "2",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "breached",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录017"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "last_updated",
+                "old_value": "2025-09-30 15:48:53",
+                "value": "2025-09-30 15:52:03",
+                "record_id": "记录010"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "sla_duration_percentage",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录017"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "task_sla",
+                "old_value": "",
+                "value": "记录009",
+                "record_id": "记录017"
+              },
+              {
+                "table": "incident",
+                "field": "activity_due",
+                "old_value": "2025-09-30 17:48:52",
+                "value": "2025-09-30 17:52:03",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "task",
+                "old_value": "",
+                "value": "记录005",
+                "record_id": "记录017"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "last_updated",
+                "old_value": "",
+                "value": "2025-09-30 15:52:03",
+                "record_id": "记录017"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "end",
+                "old_value": "",
+                "value": "2025-09-30 15:52:03",
+                "record_id": "记录010"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "retroactive",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录017"
+              },
+              {
+                "table": "incident",
+                "field": "incident_state",
+                "old_value": "1",
+                "value": "2",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "active",
+                "old_value": "",
+                "value": "1",
+                "record_id": "记录017"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "business_duration",
+                "old_value": "1970-01-01 00:00:01",
+                "value": "1970-01-01 00:03:11",
+                "record_id": "记录010"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "sla_breakdown_definition",
+                "old_value": "",
+                "value": "记录013",
+                "record_id": "记录017"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "duration",
+                "old_value": "1970-01-01 00:00:01",
+                "value": "1970-01-01 00:03:11",
+                "record_id": "记录010"
+              }
+            ]
+          },
+          "metrics": {
+            "precision": 0.5,
+            "recall": 0.029411764705882353,
+            "iou": 0.02857142857142857,
+            "true_positives": 1,
+            "predicted": 2,
+            "ground_truth": 34
+          }
+        },
+        {
+          "id": "resolve",
+          "title": "解决工单",
+          "tool_name": "resolve_incident",
+          "parameters": {
+            "incident_id": "记录005",
+            "resolution_code": "Resolved by caller",
+            "resolution_notes": "Power is restored"
+          },
+          "action": {
+            "table": "incident",
+            "operation": "update",
+            "fields": {
+              "close_code": "Resolved by caller",
+              "close_notes": "Power is restored",
+              "state": "6"
+            }
+          },
+          "prediction": {
+            "changes": [
+              {
+                "table": "incident",
+                "field": "incident_state",
+                "old_value": "2",
+                "value": "6",
+                "record_id": "记录005"
+              },
+              {
+                "table": "incident",
+                "field": "active",
+                "old_value": "1",
+                "value": "0",
+                "record_id": "记录005"
+              },
+              {
+                "table": "task_sla",
+                "field": "stage",
+                "old_value": "in_progress",
+                "value": "paused",
+                "record_id": "记录009"
+              }
+            ],
+            "seconds": 3.188
+          },
+          "actual": {
+            "changes": [
+              {
+                "table": "metric_instance",
+                "field": "duration",
+                "old_value": "",
+                "value": "1970-01-01 00:06:54",
+                "record_id": "记录015"
+              },
+              {
+                "table": "metric_instance",
+                "field": "start",
+                "old_value": "",
+                "value": "2025-09-30 15:48:52",
+                "record_id": "记录018"
+              },
+              {
+                "table": "metric_instance",
+                "field": "definition",
+                "old_value": "",
+                "value": "记录008",
+                "record_id": "记录019"
+              },
+              {
+                "table": "metric_instance",
+                "field": "start",
+                "old_value": "",
+                "value": "2025-09-30 15:58:57",
+                "record_id": "记录019"
+              },
+              {
+                "table": "metric_instance",
+                "field": "definition",
+                "old_value": "",
+                "value": "记录020",
+                "record_id": "记录018"
+              },
+              {
+                "table": "metric_instance",
+                "field": "table",
+                "old_value": "",
+                "value": "incident",
+                "record_id": "记录019"
+              },
+              {
+                "table": "metric_instance",
+                "field": "calculation_complete",
+                "old_value": "0",
+                "value": "1",
+                "record_id": "记录015"
+              },
+              {
+                "table": "metric_instance",
+                "field": "field_value",
+                "old_value": "",
+                "value": "6",
+                "record_id": "记录019"
+              },
+              {
+                "table": "metric_instance",
+                "field": "table",
+                "old_value": "",
+                "value": "incident",
+                "record_id": "记录018"
+              },
+              {
+                "table": "metric_instance",
+                "field": "field",
+                "old_value": "",
+                "value": "incident_state",
+                "record_id": "记录018"
+              },
+              {
+                "table": "metric_instance",
+                "field": "value",
+                "old_value": "",
+                "value": "Resolved",
+                "record_id": "记录019"
+              },
+              {
+                "table": "metric_instance",
+                "field": "field",
+                "old_value": "",
+                "value": "incident_state",
+                "record_id": "记录019"
+              },
+              {
+                "table": "metric_instance",
+                "field": "id",
+                "old_value": "",
+                "value": "记录005",
+                "record_id": "记录018"
+              },
+              {
+                "table": "metric_instance",
+                "field": "duration",
+                "old_value": "",
+                "value": "1970-01-01 00:10:05",
+                "record_id": "记录018"
+              },
+              {
+                "table": "metric_instance",
+                "field": "id",
+                "old_value": "",
+                "value": "记录005",
+                "record_id": "记录019"
+              },
+              {
+                "table": "metric_instance",
+                "field": "calculation_complete",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录019"
+              },
+              {
+                "table": "metric_instance",
+                "field": "end",
+                "old_value": "",
+                "value": "2025-09-30 15:58:57",
+                "record_id": "记录018"
+              },
+              {
+                "table": "metric_instance",
+                "field": "end",
+                "old_value": "",
+                "value": "2025-09-30 15:58:57",
+                "record_id": "记录015"
+              },
+              {
+                "table": "metric_instance",
+                "field": "calculation_complete",
+                "old_value": "",
+                "value": "1",
+                "record_id": "记录018"
+              },
+              {
+                "table": "incident",
+                "field": "resolved_at",
+                "old_value": "",
+                "value": "2025-09-30 15:58:57",
+                "record_id": "记录005"
+              },
+              {
+                "table": "task_sla",
+                "field": "stage",
+                "old_value": "in_progress",
+                "value": "paused",
+                "record_id": "记录009"
+              },
+              {
+                "table": "incident",
+                "field": "business_stc",
+                "old_value": "",
+                "value": "0",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "duration",
+                "old_value": "1970-01-01 00:02:57",
+                "value": "1970-01-01 00:06:54",
+                "record_id": "记录017"
+              },
+              {
+                "table": "task_sla",
+                "field": "time_left",
+                "old_value": "1970-01-01 00:53:52",
+                "value": "1970-01-01 00:49:55",
+                "record_id": "记录009"
+              },
+              {
+                "table": "incident",
+                "field": "calendar_stc",
+                "old_value": "",
+                "value": "605",
+                "record_id": "记录005"
+              },
+              {
+                "table": "task_sla",
+                "field": "business_duration",
+                "old_value": "1970-01-01 00:06:08",
+                "value": "1970-01-01 00:10:05",
+                "record_id": "记录009"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "pause_time",
+                "old_value": "",
+                "value": "2025-09-30 15:58:57",
+                "record_id": "记录017"
+              },
+              {
+                "table": "task_sla",
+                "field": "duration",
+                "old_value": "1970-01-01 00:06:08",
+                "value": "1970-01-01 00:10:05",
+                "record_id": "记录009"
+              },
+              {
+                "table": "incident",
+                "field": "incident_state",
+                "old_value": "2",
+                "value": "6",
+                "record_id": "记录005"
+              },
+              {
+                "table": "incident",
+                "field": "resolved_by",
+                "old_value": "",
+                "value": "记录012",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "business_duration",
+                "old_value": "1970-01-01 00:02:57",
+                "value": "1970-01-01 00:06:54",
+                "record_id": "记录017"
+              },
+              {
+                "table": "task_sla",
+                "field": "business_percentage",
+                "old_value": "10.22",
+                "value": "16.81",
+                "record_id": "记录009"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "sla_duration_percentage",
+                "old_value": "4.92",
+                "value": "11.5",
+                "record_id": "记录017"
+              },
+              {
+                "table": "task_sla",
+                "field": "business_time_left",
+                "old_value": "1970-01-01 00:53:52",
+                "value": "1970-01-01 00:49:55",
+                "record_id": "记录009"
+              },
+              {
+                "table": "incident",
+                "field": "business_duration",
+                "old_value": "",
+                "value": "1970-01-01 00:00:00",
+                "record_id": "记录005"
+              },
+              {
+                "table": "sla_breakdown_by_assignment",
+                "field": "last_updated",
+                "old_value": "2025-09-30 15:55:00",
+                "value": "2025-09-30 15:58:57",
+                "record_id": "记录017"
+              },
+              {
+                "table": "task_sla",
+                "field": "percentage",
+                "old_value": "10.22",
+                "value": "16.81",
+                "record_id": "记录009"
+              },
+              {
+                "table": "task_sla",
+                "field": "pause_time",
+                "old_value": "",
+                "value": "2025-09-30 15:58:57",
+                "record_id": "记录009"
+              },
+              {
+                "table": "incident",
+                "field": "calendar_duration",
+                "old_value": "",
+                "value": "1970-01-01 00:10:05",
+                "record_id": "记录005"
+              }
+            ]
+          },
+          "metrics": {
+            "precision": 0.6666666666666666,
+            "recall": 0.058823529411764705,
+            "iou": 0.05714285714285714,
+            "true_positives": 2,
+            "predicted": 3,
+            "ground_truth": 34
+          }
+        }
+      ]
+    }
+  ],
+  "workflow": {
+    "title": "故障工单处理",
+    "source": "recorded_servicenow",
+    "is_live": false,
+    "steps": [
+      {
+        "index": 1,
+        "title": "创建故障工单",
+        "tool_name": "create_incident",
+        "parameters": {
+          "short_description": "Server outage in production environment",
+          "description": "The server is down and we are unable to access the production environment",
+          "impact": "1",
+          "urgency": "1"
+        },
+        "prediction": {
+          "changes": [
+            {
+              "table": "incident",
+              "field": "priority",
+              "old_value": null,
+              "value": "1"
+            }
+          ],
+          "seconds": 5.015
+        },
+        "actual": {
+          "changes": [
+            {
+              "table": "incident",
+              "field": "short_description",
+              "old_value": null,
+              "value": "Server outage in production environment",
+              "record_id": "记录021",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "direct_input"
+            },
+            {
+              "table": "incident",
+              "field": "parent",
+              "old_value": null,
+              "value": "",
+              "record_id": "记录021",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "incident",
+              "field": "close_code",
+              "old_value": null,
+              "value": "",
+              "record_id": "记录021",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "incident",
+              "field": "assignment_group",
+              "old_value": null,
+              "value": "",
+              "record_id": "记录021",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "incident",
+              "field": "impact",
+              "old_value": null,
+              "value": "1",
+              "record_id": "记录021",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "direct_input"
+            },
+            {
+              "table": "incident",
+              "field": "description",
+              "old_value": null,
+              "value": "The server is down and we are unable to access the production environment",
+              "record_id": "记录021",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "direct_input"
+            },
+            {
+              "table": "incident",
+              "field": "active",
+              "old_value": null,
+              "value": "true",
+              "record_id": "记录021",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "incident",
+              "field": "priority",
+              "old_value": null,
+              "value": "1",
+              "record_id": "记录021",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "incident",
+              "field": "close_notes",
+              "old_value": null,
+              "value": "",
+              "record_id": "记录021",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "incident",
+              "field": "parent_incident",
+              "old_value": null,
+              "value": "",
+              "record_id": "记录021",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "incident",
+              "field": "number",
+              "old_value": null,
+              "value": "工单002",
+              "record_id": "记录021",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "incident",
+              "field": "resolved_by",
+              "old_value": null,
+              "value": "",
+              "record_id": "记录021",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "incident",
+              "field": "incident_state",
+              "old_value": null,
+              "value": "1",
+              "record_id": "记录021",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "incident",
+              "field": "urgency",
+              "old_value": null,
+              "value": "1",
+              "record_id": "记录021",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "direct_input"
+            },
+            {
+              "table": "incident",
+              "field": "caller_id",
+              "old_value": null,
+              "value": "",
+              "record_id": "记录021",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "incident",
+              "field": "problem_id",
+              "old_value": null,
+              "value": "记录022",
+              "record_id": "记录021",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "incident",
+              "field": "resolved_at",
+              "old_value": null,
+              "value": "",
+              "record_id": "记录021",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "incident",
+              "field": "state",
+              "old_value": null,
+              "value": "1",
+              "record_id": "记录021",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "incident",
+              "field": "reassignment_count",
+              "old_value": null,
+              "value": "0",
+              "record_id": "记录021",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "incident",
+              "field": "assigned_to",
+              "old_value": null,
+              "value": "",
+              "record_id": "记录021",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "problem",
+              "field": "short_description",
+              "old_value": null,
+              "value": "",
+              "record_id": "记录022",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "problem",
+              "field": "assignment_group",
+              "old_value": null,
+              "value": "",
+              "record_id": "记录022",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "problem",
+              "field": "impact",
+              "old_value": null,
+              "value": "1",
+              "record_id": "记录022",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "problem",
+              "field": "description",
+              "old_value": null,
+              "value": "",
+              "record_id": "记录022",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "problem",
+              "field": "active",
+              "old_value": null,
+              "value": "true",
+              "record_id": "记录022",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "problem",
+              "field": "priority",
+              "old_value": null,
+              "value": "1",
+              "record_id": "记录022",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "problem",
+              "field": "number",
+              "old_value": null,
+              "value": "问题001",
+              "record_id": "记录022",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "problem",
+              "field": "urgency",
+              "old_value": null,
+              "value": "1",
+              "record_id": "记录022",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "problem",
+              "field": "state",
+              "old_value": null,
+              "value": "101",
+              "record_id": "记录022",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "problem",
+              "field": "assigned_to",
+              "old_value": null,
+              "value": "",
+              "record_id": "记录022",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "task_sla",
+              "field": "start_time",
+              "old_value": null,
+              "value": "2026-10-20 05:56:31",
+              "record_id": "记录023",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "task_sla",
+              "field": "task",
+              "old_value": null,
+              "value": "记录021",
+              "record_id": "记录023",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "task_sla",
+              "field": "stage",
+              "old_value": null,
+              "value": "in_progress",
+              "record_id": "记录023",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "task_sla",
+              "field": "percentage",
+              "old_value": null,
+              "value": "0",
+              "record_id": "记录023",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "task_sla",
+              "field": "end_time",
+              "old_value": null,
+              "value": "",
+              "record_id": "记录023",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "task_sla",
+              "field": "sla",
+              "old_value": null,
+              "value": "记录011",
+              "record_id": "记录023",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "task_sla",
+              "field": "active",
+              "old_value": null,
+              "value": "true",
+              "record_id": "记录023",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "task_sla",
+              "field": "has_breached",
+              "old_value": null,
+              "value": "false",
+              "record_id": "记录023",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "task_sla",
+              "field": "business_percentage",
+              "old_value": null,
+              "value": "0",
+              "record_id": "记录023",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "field",
+              "old_value": null,
+              "value": "",
+              "record_id": "记录024",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "start",
+              "old_value": null,
+              "value": "",
+              "record_id": "记录024",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "field_value",
+              "old_value": null,
+              "value": "false",
+              "record_id": "记录024",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "definition",
+              "old_value": null,
+              "value": "记录007",
+              "record_id": "记录024",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "end",
+              "old_value": null,
+              "value": "",
+              "record_id": "记录024",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "id",
+              "old_value": null,
+              "value": "记录021",
+              "record_id": "记录024",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "calculation_complete",
+              "old_value": null,
+              "value": "true",
+              "record_id": "记录024",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "value",
+              "old_value": null,
+              "value": "false",
+              "record_id": "记录024",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "field",
+              "old_value": null,
+              "value": "incident_state",
+              "record_id": "记录025",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "start",
+              "old_value": null,
+              "value": "2026-10-20 05:56:31",
+              "record_id": "记录025",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "field_value",
+              "old_value": null,
+              "value": "1",
+              "record_id": "记录025",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "definition",
+              "old_value": null,
+              "value": "记录008",
+              "record_id": "记录025",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "end",
+              "old_value": null,
+              "value": "",
+              "record_id": "记录025",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "id",
+              "old_value": null,
+              "value": "记录021",
+              "record_id": "记录025",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "calculation_complete",
+              "old_value": null,
+              "value": "false",
+              "record_id": "记录025",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "value",
+              "old_value": null,
+              "value": "New",
+              "record_id": "记录025",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "field",
+              "old_value": null,
+              "value": "active",
+              "record_id": "记录026",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "start",
+              "old_value": null,
+              "value": "2026-10-20 05:56:31",
+              "record_id": "记录026",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "field_value",
+              "old_value": null,
+              "value": "true",
+              "record_id": "记录026",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "definition",
+              "old_value": null,
+              "value": "记录006",
+              "record_id": "记录026",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "end",
+              "old_value": null,
+              "value": "",
+              "record_id": "记录026",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "id",
+              "old_value": null,
+              "value": "记录021",
+              "record_id": "记录026",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "calculation_complete",
+              "old_value": null,
+              "value": "false",
+              "record_id": "记录026",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "value",
+              "old_value": null,
+              "value": "true",
+              "record_id": "记录026",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            }
+          ]
+        },
+        "verified": true
+      },
+      {
+        "index": 2,
+        "title": "创建测试人员",
+        "tool_name": "create_user",
+        "parameters": {
+          "user_name": "人员006",
+          "first_name": "人员002",
+          "last_name": "人员003",
+          "email": "人员005",
+          "department": "记录027"
+        },
+        "prediction": {
+          "changes": [
+            {
+              "table": "sys_user",
+              "field": "name",
+              "old_value": "",
+              "value": "人员001"
+            },
+            {
+              "table": "cmn_notif_device",
+              "field": "type",
+              "old_value": null,
+              "value": "Email"
+            }
+          ],
+          "seconds": 1.891
+        },
+        "actual": {
+          "changes": [
+            {
+              "table": "sys_user",
+              "field": "user_name",
+              "old_value": null,
+              "value": "人员006",
+              "record_id": "记录028",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "direct_input"
+            },
+            {
+              "table": "sys_user",
+              "field": "last_name",
+              "old_value": null,
+              "value": "人员003",
+              "record_id": "记录028",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "direct_input"
+            },
+            {
+              "table": "sys_user",
+              "field": "active",
+              "old_value": null,
+              "value": "true",
+              "record_id": "记录028",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "direct_input"
+            },
+            {
+              "table": "sys_user",
+              "field": "department",
+              "old_value": null,
+              "value": "记录027",
+              "record_id": "记录028",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "direct_input"
+            },
+            {
+              "table": "sys_user",
+              "field": "first_name",
+              "old_value": null,
+              "value": "人员002",
+              "record_id": "记录028",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "direct_input"
+            },
+            {
+              "table": "sys_user",
+              "field": "email",
+              "old_value": null,
+              "value": "人员005",
+              "record_id": "记录028",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "direct_input"
+            },
+            {
+              "table": "u_user_group_clearance",
+              "field": "u_group",
+              "old_value": null,
+              "value": "",
+              "record_id": "记录029",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "u_user_group_clearance",
+              "field": "u_clearance_level",
+              "old_value": null,
+              "value": "0",
+              "record_id": "记录029",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "direct_input"
+            },
+            {
+              "table": "u_user_group_clearance",
+              "field": "u_user",
+              "old_value": null,
+              "value": "记录028",
+              "record_id": "记录029",
+              "baseline_known": false,
+              "first_seen": true,
+              "classification": "direct_input"
+            }
+          ]
+        },
+        "verified": true
+      },
+      {
+        "index": 3,
+        "title": "分派工单",
+        "tool_name": "update_incident",
+        "parameters": {
+          "incident_id": "记录021",
+          "assigned_to": "记录028"
+        },
+        "prediction": {
+          "changes": [
+            {
+              "table": "incident",
+              "field": "state",
+              "old_value": "1",
+              "value": "2",
+              "record_id": "记录021"
+            }
+          ],
+          "seconds": 7.937
+        },
+        "actual": {
+          "changes": [
+            {
+              "table": "incident",
+              "field": "incident_state",
+              "old_value": "1",
+              "value": "2",
+              "record_id": "记录021",
+              "baseline_known": true,
+              "first_seen": false,
+              "classification": "observed"
+            },
+            {
+              "table": "incident",
+              "field": "state",
+              "old_value": "1",
+              "value": "2",
+              "record_id": "记录021",
+              "baseline_known": true,
+              "first_seen": false,
+              "classification": "observed"
+            },
+            {
+              "table": "incident",
+              "field": "assigned_to",
+              "old_value": "",
+              "value": "记录028",
+              "record_id": "记录021",
+              "baseline_known": true,
+              "first_seen": false,
+              "classification": "direct_input"
+            },
+            {
+              "table": "metric_instance",
+              "field": "field",
+              "old_value": null,
+              "value": "assigned_to",
+              "record_id": "记录030",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "start",
+              "old_value": null,
+              "value": "2026-10-20 05:57:55",
+              "record_id": "记录030",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "field_value",
+              "old_value": null,
+              "value": "记录028",
+              "record_id": "记录030",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "definition",
+              "old_value": null,
+              "value": "记录016",
+              "record_id": "记录030",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "end",
+              "old_value": null,
+              "value": "",
+              "record_id": "记录030",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "id",
+              "old_value": null,
+              "value": "记录021",
+              "record_id": "记录030",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "calculation_complete",
+              "old_value": null,
+              "value": "false",
+              "record_id": "记录030",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "value",
+              "old_value": null,
+              "value": "人员001",
+              "record_id": "记录030",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "field",
+              "old_value": null,
+              "value": "incident_state",
+              "record_id": "记录031",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "start",
+              "old_value": null,
+              "value": "2026-10-20 05:57:55",
+              "record_id": "记录031",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "field_value",
+              "old_value": null,
+              "value": "2",
+              "record_id": "记录031",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "definition",
+              "old_value": null,
+              "value": "记录008",
+              "record_id": "记录031",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "end",
+              "old_value": null,
+              "value": "",
+              "record_id": "记录031",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "id",
+              "old_value": null,
+              "value": "记录021",
+              "record_id": "记录031",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "calculation_complete",
+              "old_value": null,
+              "value": "false",
+              "record_id": "记录031",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "value",
+              "old_value": null,
+              "value": "In Progress",
+              "record_id": "记录031",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "end",
+              "old_value": "",
+              "value": "2026-10-20 05:57:55",
+              "record_id": "记录025",
+              "baseline_known": true,
+              "first_seen": false,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "calculation_complete",
+              "old_value": "false",
+              "value": "true",
+              "record_id": "记录025",
+              "baseline_known": true,
+              "first_seen": false,
+              "classification": "observed"
+            }
+          ]
+        },
+        "verified": true
+      },
+      {
+        "index": 4,
+        "title": "添加处理备注",
+        "tool_name": "add_comment",
+        "parameters": {
+          "incident_id": "记录021",
+          "comment": "There seems to be a power outage in the server room.",
+          "is_work_note": true
+        },
+        "prediction": {
+          "changes": [
+            {
+              "table": "cmn_notif_message",
+              "field": "name",
+              "old_value": "",
+              "value": "Incident worknoted for ITIL"
+            }
+          ],
+          "seconds": 4.75
+        },
+        "actual": {
+          "changes": [
+            {
+              "table": "sys_journal_field",
+              "field": "name",
+              "old_value": null,
+              "value": "incident",
+              "record_id": "记录032",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "sys_journal_field",
+              "field": "element_id",
+              "old_value": null,
+              "value": "记录021",
+              "record_id": "记录032",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "sys_journal_field",
+              "field": "value",
+              "old_value": null,
+              "value": "There seems to be a power outage in the server room.",
+              "record_id": "记录032",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "sys_journal_field",
+              "field": "element",
+              "old_value": null,
+              "value": "work_notes",
+              "record_id": "记录032",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            }
+          ]
+        },
+        "verified": true
+      },
+      {
+        "index": 5,
+        "title": "解决工单",
+        "tool_name": "resolve_incident",
+        "parameters": {
+          "incident_id": "记录021",
+          "resolution_code": "Resolved by caller",
+          "resolution_notes": "Power is restored"
+        },
+        "prediction": {
+          "changes": [
+            {
+              "table": "incident",
+              "field": "active",
+              "old_value": "true",
+              "value": "false",
+              "record_id": "记录021"
+            },
+            {
+              "table": "task_sla",
+              "field": "stage",
+              "old_value": "in_progress",
+              "value": "paused",
+              "record_id": "记录023"
+            },
+            {
+              "table": "metric_instance",
+              "field": "calculation_complete",
+              "old_value": "false",
+              "value": "true",
+              "record_id": "记录030"
+            },
+            {
+              "table": "metric_instance",
+              "field": "calculation_complete",
+              "old_value": "false",
+              "value": "true",
+              "record_id": "记录031"
+            }
+          ],
+          "seconds": 5.906
+        },
+        "actual": {
+          "changes": [
+            {
+              "table": "incident",
+              "field": "close_code",
+              "old_value": "",
+              "value": "Resolved by caller",
+              "record_id": "记录021",
+              "baseline_known": true,
+              "first_seen": false,
+              "classification": "direct_input"
+            },
+            {
+              "table": "incident",
+              "field": "close_notes",
+              "old_value": "",
+              "value": "Power is restored",
+              "record_id": "记录021",
+              "baseline_known": true,
+              "first_seen": false,
+              "classification": "direct_input"
+            },
+            {
+              "table": "incident",
+              "field": "resolved_by",
+              "old_value": "",
+              "value": "记录012",
+              "record_id": "记录021",
+              "baseline_known": true,
+              "first_seen": false,
+              "classification": "observed"
+            },
+            {
+              "table": "incident",
+              "field": "incident_state",
+              "old_value": "2",
+              "value": "6",
+              "record_id": "记录021",
+              "baseline_known": true,
+              "first_seen": false,
+              "classification": "observed"
+            },
+            {
+              "table": "incident",
+              "field": "resolved_at",
+              "old_value": "",
+              "value": "2026-10-20 05:59:35",
+              "record_id": "记录021",
+              "baseline_known": true,
+              "first_seen": false,
+              "classification": "observed"
+            },
+            {
+              "table": "incident",
+              "field": "state",
+              "old_value": "2",
+              "value": "6",
+              "record_id": "记录021",
+              "baseline_known": true,
+              "first_seen": false,
+              "classification": "direct_input"
+            },
+            {
+              "table": "task_sla",
+              "field": "stage",
+              "old_value": "in_progress",
+              "value": "paused",
+              "record_id": "记录023",
+              "baseline_known": true,
+              "first_seen": false,
+              "classification": "observed"
+            },
+            {
+              "table": "task_sla",
+              "field": "percentage",
+              "old_value": "0",
+              "value": "5.11",
+              "record_id": "记录023",
+              "baseline_known": true,
+              "first_seen": false,
+              "classification": "observed"
+            },
+            {
+              "table": "task_sla",
+              "field": "business_percentage",
+              "old_value": "0",
+              "value": "5.11",
+              "record_id": "记录023",
+              "baseline_known": true,
+              "first_seen": false,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "end",
+              "old_value": "",
+              "value": "2026-10-20 05:59:35",
+              "record_id": "记录031",
+              "baseline_known": true,
+              "first_seen": false,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "calculation_complete",
+              "old_value": "false",
+              "value": "true",
+              "record_id": "记录031",
+              "baseline_known": true,
+              "first_seen": false,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "field",
+              "old_value": null,
+              "value": "incident_state",
+              "record_id": "记录033",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "start",
+              "old_value": null,
+              "value": "2026-10-20 05:56:31",
+              "record_id": "记录033",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "field_value",
+              "old_value": null,
+              "value": "",
+              "record_id": "记录033",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "definition",
+              "old_value": null,
+              "value": "记录020",
+              "record_id": "记录033",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "end",
+              "old_value": null,
+              "value": "2026-10-20 05:59:35",
+              "record_id": "记录033",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "id",
+              "old_value": null,
+              "value": "记录021",
+              "record_id": "记录033",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "calculation_complete",
+              "old_value": null,
+              "value": "true",
+              "record_id": "记录033",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "value",
+              "old_value": null,
+              "value": "",
+              "record_id": "记录033",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "field",
+              "old_value": null,
+              "value": "incident_state",
+              "record_id": "记录034",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "start",
+              "old_value": null,
+              "value": "2026-10-20 05:59:35",
+              "record_id": "记录034",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "field_value",
+              "old_value": null,
+              "value": "6",
+              "record_id": "记录034",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "definition",
+              "old_value": null,
+              "value": "记录008",
+              "record_id": "记录034",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "end",
+              "old_value": null,
+              "value": "",
+              "record_id": "记录034",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "id",
+              "old_value": null,
+              "value": "记录021",
+              "record_id": "记录034",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "calculation_complete",
+              "old_value": null,
+              "value": "false",
+              "record_id": "记录034",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            },
+            {
+              "table": "metric_instance",
+              "field": "value",
+              "old_value": null,
+              "value": "Resolved",
+              "record_id": "记录034",
+              "baseline_known": true,
+              "first_seen": true,
+              "classification": "observed"
+            }
+          ]
+        },
+        "verified": true
+      }
+    ],
+    "model": "deepseek-v4-pro",
+    "model_label": "DeepSeek V4 Pro"
+  }
+}
