@@ -1,30 +1,25 @@
-# CDA · World of Workflows
+# CDA · 四个世界，一份记忆
 
-交互式演示：[打开网站](https://lzhts1.github.io/CDA.github.io/)
+[打开演示](https://lzhts1.github.io/CDA.github.io/)
 
-- 查看从 20 条 WoW 记录学习得到的规则。
-- 切换 DeepSeek V4.1 Flash 1017 / V4 Pro，比较三个样例的预测与 WoW 记录。
-- 单步或自动回放已经完成的五步 ServiceNow 工单流程。
+从世界 A 开始，查看 CDA 实际选择的操作、逐字呈现的观察，以及持续维护的规则表。依次进入 B、C、D，观察规则的新增、修订与退役。完成后可切换世界、回看各轮记录。
 
-站点使用保存的预测和执行记录。页面文件位于 `index.html` 和 `assets/`，展示数据位于 `data/demo.json`。
+默认使用一次已完成探索的 112 轮记录（DeepSeek V4 Pro），不需要后端。四世界在 ServiceNow 的独立实验表上运行，业务逻辑来自 [World of Workflows](https://github.com/Skyfall-Research/world-of-workflows) 的受控移植。数据是模型当次实际维护的认识及观察摘要。
 
-## 本地预览
-
-在本仓库目录运行 `python -m http.server 8000`，打开 `http://localhost:8000`。
-
-## 更新
-
-从 CDA 复现工程导出最新页面与展示数据：
+实时探索入口连接本机 CDA 工程服务 `http://127.0.0.1:8766/`。在完整工程终端运行：
 
 ```powershell
-.\.venv\Scripts\python.exe -B scripts\export_pages.py --output .deploy\github-pages
-git -C .deploy\github-pages add index.html assets data third_party .nojekyll
-git -C .deploy\github-pages commit -m "Update CDA demo"
-git -C .deploy\github-pages push origin main
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\start_exploration.ps1
 ```
 
-GitHub Pages 从 `main` 分支的根目录发布。
+模型可选 DeepSeek V4.1 Flash 1017 / V4 Pro，同一会话使用同一模型。模型与 ServiceNow 凭据留在本地后端，公开站点不包含密钥。
 
-## 数据来源
+网页为 `index.html`、`assets/pages.css` 和 `assets/pages.js`；当前数据为 `data/exploration.json`。旧预测数据 `data/demo.json` 为保留档案。
 
-使用 [World of Workflows](https://github.com/Skyfall-Research/world-of-workflows) 的轨迹数据。对应 MIT 许可见 [third_party/WoW-LICENSE](third_party/WoW-LICENSE)。
+本仓库可通过静态 HTTP 服务预览回放。在完整 CDA 工程中更新：
+
+```powershell
+.\.venv\Scripts\python.exe -B scripts\export_exploration.py --site-dir .deploy\github-pages
+```
+
+GitHub Pages 从 `main` 分支根目录发布。WoW 使用 MIT 许可，见 [WoW-LICENSE](WoW-LICENSE)。

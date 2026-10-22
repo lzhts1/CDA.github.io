@@ -1,251 +1,428 @@
-"use strict";
-
 (() => {
+  "use strict";
   const $ = (id) => document.getElementById(id);
-  const state = { data: null, model: null, example: null, mode: "learning", revealed: 0, selectedStep: 0, timer: null, allChanges: false };
-  const labels = { state: "状态", incident_state: "工单状态", priority: "优先级", impact: "影响程度", urgency: "紧急程度", assigned_to: "负责人", assignment_group: "负责团队", problem_id: "关联问题单", caller_id: "报告人", short_description: "简要说明", description: "详细说明", active: "启用状态", department: "部门", user_name: "用户名", first_name: "名字", last_name: "姓氏", name: "名称", email: "电子邮箱", close_code: "解决方式", close_notes: "解决说明", resolved_at: "解决时间", resolved_by: "解决人", number: "编号", u_user: "关联人员", u_clearance_level: "访问级别", work_notes: "处理备注", comments: "备注", value: "记录内容", stage: "阶段" };
-  const descriptions = { create_incident: "创建故障工单，观察优先级与关联业务记录。", create_user: "创建测试人员，观察人员及访问级别记录。", update_incident: "将工单分派给测试人员，观察工单流转。", add_comment: "添加处理备注，观察日志与关联记录。", resolve_incident: "解决故障工单，观察状态、解决说明及计时变化。" };
-  const array = (value) => Array.isArray(value) ? value : [];
-  const field = (value) => labels[value] || value || "字段";
-  const valueText = (value) => value === null || value === undefined || value === "" ? "（空）" : typeof value === "object" ? JSON.stringify(value) : String(value);
-  const changeName = (change) => `${change.table || "记录"}.${field(change.field)}`;
-  const percent = (value) => Number.isFinite(value) ? `${(value * 100).toFixed(1)}%` : "—";
-  function node(tag, className, value) {
-    const element = document.createElement(tag);
-    if (className) element.className = className;
-    if (value !== undefined && value !== null) element.textContent = String(value);
-    return element;
+  const ids = ["A", "B", "C", "D"];
+  const kinds = {read: "观察", write: "操作", add: "新增", update: "修订", retire: "退役", error: "未执行", stop: "完成"};
+  const tables = {u_cda_wow_user: "用户", u_cda_wow_incident: "工单", u_cda_wow_problem: "问题单", u_cda_wow_hardware: "硬件"};
+  const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+  const makeTrack = (events = [], initial = []) => ({events, initial, shown: 0, pending: null});
+  const state = {
+    data: null, mode: "replay", view: 0, focus: null, playing: false, frame: null, delay: null,
+    replay: [], live: {tracks: ids.map(() => makeTrack()), ready: false, connected: false,
+      info: null, cursor: 0, csrf: "", model: "", completed: [], status: "idle", busy: false,
+      poll: null, polling: false, session: null, restoreBefore: null, error: ""}
+  };
+  const explorer = $("explorer");
+  const tracks = () => state.mode === "replay" ? state.replay : state.live.tracks;
+  const track = () => tracks()[state.view];
+  const speed = () => Number($("speed-select").value) || 1;
+  const isComplete = (index) => {
+    const t = tracks()[index];
+    return !!t && !t.pending && t.shown === t.events.length && (state.mode === "replay" ? t.events.length > 0 : state.live.completed.includes(ids[index]));
+  };
+  const firstUnfinished = () => ids.findIndex((_, i) => !isComplete(i));
+  const canSelect = (index) => { const first = firstUnfinished(); return first === -1 || index <= first; };
+  const displayEvent = () => {
+    const t = track();
+    return state.focus !== null ? t.events[state.focus] : t.pending ? t.events[t.pending.index] : t.events[t.shown - 1];
+  };
+  function element(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
   }
-  function rawDetails(value, title = "原始结果") {
-    const details = node("details", "raw-details");
-    details.append(node("summary", "", title), node("pre", "", JSON.stringify(value, null, 2)));
-    return details;
+  function error(message = "") {
+    $("error-message").textContent = message;
+    $("error-message").hidden = !message;
   }
-  function currentModel() { return array(state.data?.models).find((item) => item.id === state.model); }
-  function currentExample() { return array(currentModel()?.examples).find((item) => item.id === state.example); }
-  function triggerSentence(trigger) {
-    const label = field(trigger.field);
-    const op = trigger.op || "changes";
-    if (op === "changes") return `${label}发生变化`;
-    if (op === "changes_to") return `${label}变为 ${valueText(trigger.value)}`;
-    if (["equals", "is", "eq", "="].includes(op)) return `${label}为 ${valueText(trigger.value)}`;
-    if (["not_equals", "is_not", "ne", "!="].includes(op)) return `${label}不为 ${valueText(trigger.value)}`;
-    return `${label} ${op}${trigger.value === undefined ? "" : ` ${valueText(trigger.value)}`}`;
+  function valueText(value) {
+    if (value === null || value === "") return "（空）";
+    return typeof value === "object" ? JSON.stringify(value, null, 2) : String(value);
   }
-  function ruleEffect(rule) {
-    const target = `${rule.effect_table || rule.table}.${field(rule.effect_field)}`;
-    if (rule.effect_kind === "lookup") return `${target}根据 ${array(rule.effect_lookup?.inputs).map(field).join("、")} 的对应关系确定`;
-    if (rule.effect_kind === "computed") return `${target}由 ${array(rule.effect_formula?.inputs).map(field).join("、")} 计算生成`;
-    if (rule.effect_kind === "transform") return `${target}按转换规则更新`;
-    if (rule.effect_kind === "copy") return `${target}复制 ${field(rule.effect_source_field || rule.trigger_field)} 的值`;
-    return `${target}变为 ${valueText(rule.effect_value)}`;
+  function currentRules() {
+    const t = track();
+    return state.focus !== null ? t.events[state.focus].snapshot : t.shown > 0 ? t.events[t.shown - 1].snapshot : t.initial;
   }
-  function renderRules() {
-    const learning = state.data.learning || {};
-    const rules = array(learning.rules);
-    $("learning-sample-count").textContent = String(learning.sample_count ?? 20);
-    $("learning-rule-count").textContent = String(learning.rules_count ?? rules.length);
-    $("learning-status").textContent = "学习完成";
-    $("rules-summary-count").textContent = `· ${rules.length} 条`;
-    $("rules-list").replaceChildren(...rules.map((rule, index) => {
-      const item = node("article", "learned-rule");
-      const heading = node("div", "rule-heading");
-      heading.append(node("code", "", rule.id || `规则 ${index + 1}`), node("span", "", rule.table || "业务规则"));
-      if (Number.isFinite(rule.confidence)) heading.append(node("span", "rule-confidence", `置信度 ${percent(rule.confidence)}`));
-      const conditions = [triggerSentence({ field: rule.trigger_field, op: rule.trigger_op, value: rule.trigger_value }), ...array(rule.additional_triggers).map(triggerSentence)];
-      item.append(heading, node("p", "rule-condition", `当 ${conditions.join("，并且 ")}`), node("p", "rule-effect", `则 ${ruleEffect(rule)}`), rawDetails(rule, "查看规则结构"));
-      return item;
-    }));
-  }
-  function changeList(changes, predicted = false) {
-    const rows = array(changes);
-    if (!rows.length) return node("p", "prediction-empty", predicted ? "未预测到字段变化" : "没有记录到字段变化");
-    const list = node("ul", "prediction-changes");
-    for (const change of rows) {
-      const item = node("li", "");
-      item.append(node("strong", "", changeName(change)));
-      const result = predicted ? `变为 ${valueText(change.value)}` : `${change.baseline_known === false ? "—" : valueText(change.old_value)} → ${valueText(change.value)}`;
-      item.append(node("code", "", result));
-      list.append(item);
+  let memoryHighlightKey = "";
+  function renderMemory() {
+    const t = track();
+    const event = state.focus !== null ? t.events[state.focus] : t.events[t.shown - 1];
+    const rules = currentRules() || [];
+    $("rule-total").textContent = String(rules.length).padStart(2, "0");
+    $("rules-empty").hidden = rules.length > 0;
+    const list = $("rules-list");
+    const scrollTop = list.scrollTop;
+    list.replaceChildren();
+    const changed = event && ["add", "update", "retire"].includes(event.kind) ? event.rule?.id : null;
+    const appendRule = (rule, retired = false) => {
+      const highlight = rule.id === changed;
+      const row = element("div", `rule-row${highlight ? " highlight" : ""}${retired ? " retired-row" : ""}`);
+      row.dataset.ruleId = rule.id;
+      const table = tables[rule.table] || rule.table;
+      const text = rule.text.startsWith(table + "：") ? rule.text.slice(table.length + 1) : rule.text;
+      row.append(element("span", "rule-id", rule.id), element("span", "rule-table", table), element("span", "rule-text", text));
+      row.append(element("span", `rule-badge${highlight ? " " + event.kind : ""}`, highlight ? kinds[event.kind] : "已保留"));
+      $("rules-list").append(row);
+    };
+    // Retired entries leave active memory. Their before/after stays in the output.
+    rules.forEach((rule) => appendRule(rule));
+    list.scrollTop = scrollTop;
+    const highlightKey = `${state.mode}:${state.view}:${event?.turn}:${state.focus}`;
+    if (changed && highlightKey !== memoryHighlightKey) {
+      const row = Array.from(list.children).find(node => node.dataset.ruleId === changed);
+      if (row) {
+        if (row.offsetTop < list.scrollTop) list.scrollTop = row.offsetTop;
+        else if (row.offsetTop + row.offsetHeight > list.scrollTop + list.clientHeight) list.scrollTop = row.offsetTop + row.offsetHeight - list.clientHeight;
+      }
     }
-    return list;
+    memoryHighlightKey = highlightKey;
+    $("count-added").textContent = event?.stats?.added || 0;
+    $("count-updated").textContent = event?.stats?.updated || 0;
+    $("count-retired").textContent = event?.stats?.retired || 0;
   }
-  function comparisonColumn(title, changes, predicted) {
-    const column = node("div", `comparison-column${predicted ? "" : " archive-column"}`);
-    column.append(node("h4", "", `${title} · ${array(changes).length} 项变化`), changeList(changes, predicted));
-    return column;
-  }
-  function renderExample() {
-    const model = currentModel();
-    const examples = array(model?.examples);
-    if (!examples.some((example) => example.id === state.example)) state.example = examples[0]?.id || null;
-    $("learning-model").textContent = model?.label || "—";
-    $("example-cards").replaceChildren(...examples.map((example, index) => {
-      const button = node("button", `example-card${example.id === state.example ? " selected" : ""}`);
+  function renderHistory() {
+    const t = track();
+    $("history-count").textContent = t.shown;
+    $("history-list").replaceChildren();
+    t.events.slice(0, t.shown).forEach((event, index) => {
+      const button = element("button", `history-event${index === (state.focus ?? t.shown - 1) ? " selected" : ""}`);
       button.type = "button";
-      button.dataset.example = example.id;
-      button.setAttribute("aria-pressed", String(example.id === state.example));
-      button.append(node("span", "example-order", `CASE 0${index + 1}`), node("strong", "", example.title), node("span", "example-source", example.tool_name || example.action?.operation || ""), node("span", "example-phase", "查看预测与结果"));
-      button.addEventListener("click", () => { state.example = example.id; renderExample(); });
-      return button;
-    }));
-    const example = currentExample();
-    if (!example) {
-      $("example-status").textContent = "暂无样例";
-      $("example-result").replaceChildren();
-      return;
-    }
-    $("example-selected-title").textContent = example.title;
-    $("example-selected-description").textContent = descriptions[example.tool_name] || "查看该操作的模型预测与 WoW 记录。";
-    $("example-input").textContent = JSON.stringify(example.parameters || example.action || {}, null, 2);
-    $("example-status").textContent = "预测完成";
-    const comparison = node("div", "archive-comparison");
-    comparison.append(comparisonColumn("模型预测", example.prediction?.changes, true), comparisonColumn("WoW 记录", example.actual?.changes, false));
-    const metrics = node("div", "archive-metrics");
-    metrics.append(node("strong", "", "对照结果"), node("span", "", `精确率 ${percent(example.metrics?.precision)}`), node("span", "", `召回率 ${percent(example.metrics?.recall)}`), node("span", "", `IoU ${percent(example.metrics?.iou)}`));
-    const seconds = Number.isFinite(example.prediction?.seconds) ? ` · ${example.prediction.seconds.toFixed(1)} 秒` : "";
-    $("example-result").replaceChildren(comparison, metrics, node("p", "prediction-meta", `${model.label}${seconds}`), rawDetails({ prediction: example.prediction, metrics: example.metrics, actual: example.actual }));
-  }
-  function stopAuto() {
-    if (state.timer !== null) window.clearInterval(state.timer);
-    state.timer = null;
-  }
-  function setMode(mode) {
-    state.mode = mode;
-    stopAuto();
-    const learning = mode === "learning";
-    $("learning-pane").hidden = !learning;
-    $("workflow-pane").hidden = learning;
-    $("mode-learning").classList.toggle("active", learning);
-    $("mode-workflow").classList.toggle("active", !learning);
-    $("mode-learning").setAttribute("aria-pressed", String(learning));
-    $("mode-workflow").setAttribute("aria-pressed", String(!learning));
-    renderWorkflow();
-  }
-  function renderChanges(step) {
-    const changes = array(step?.actual?.changes);
-    const businessTables = new Set(["incident", "sys_user", "problem", "u_user_group_clearance"]);
-    const business = changes.filter((change) => businessTables.has(change.table) && !(change.old_value === "" && change.value === ""));
-    const displayed = state.allChanges ? changes : business;
-    $("changes-toggle").disabled = !step;
-    $("changes-toggle").textContent = state.allChanges ? "仅看业务变化" : "显示全部观测";
-    $("changes-toggle").setAttribute("aria-pressed", String(state.allChanges));
-    $("changes-count").textContent = step ? `${displayed.length} 项${state.allChanges ? "观测" : "业务变化"}` : "等待回放";
-    if (!step) {
-      const empty = node("div", "data-empty");
-      empty.append(node("strong", "", "等待第一条业务变化"), node("p", "", "这里显示操作前与操作后的字段值。"));
-      $("changes-content").replaceChildren(empty);
-      return;
-    }
-    if (!displayed.length) {
-      $("changes-content").replaceChildren(node("p", "prediction-empty", "本步骤没有此类变化"));
-      return;
-    }
-    const table = node("table", "change-table");
-    const head = node("thead", "");
-    const header = node("tr", "");
-    ["字段", "操作前", "操作后"].forEach((title) => header.append(node("th", "", title)));
-    head.append(header);
-    const body = node("tbody", "");
-    displayed.forEach((change) => {
-      const row = node("tr", "");
-      const name = node("td", "");
-      name.append(node("span", "field-name", changeName(change)));
-      if (change.record_id) name.append(node("span", "field-record", change.record_id));
-      row.append(name, node("td", "old-value", change.baseline_known === false ? "—" : valueText(change.old_value)), node("td", "new-value", valueText(change.value)));
-      body.append(row);
+      button.disabled = state.mode === "live" && (state.live.status === "running" || !!t.pending || t.shown < t.events.length);
+      button.append(element("span", "", String(event.turn).padStart(2, "0")), element("span", "", event.title), element("span", "", kinds[event.kind] || "观察"));
+      button.addEventListener("click", () => {
+        if (state.mode === "live" && (state.live.status === "running" || t.pending || t.shown < t.events.length)) return;
+        pause(); state.focus = index; render();
+      });
+      $("history-list").append(button);
     });
-    table.append(head, body);
-    $("changes-content").replaceChildren(table);
   }
-  function renderWorkflow() {
-    const workflow = state.data?.workflow || {};
-    const steps = array(workflow.steps);
-    const selected = state.revealed > 0 ? steps[Math.min(state.selectedStep, state.revealed - 1)] : null;
-    $("workflow-title").textContent = workflow.title || "故障工单处理";
-    $("workflow-model").textContent = workflow.model_label || workflow.model || "模型预测";
-    $("step-count").textContent = `${state.revealed} / ${steps.length}`;
-    $("timeline").replaceChildren(...steps.map((step, index) => {
-      const completed = index < state.revealed;
-      const button = node("button", `timeline-item${completed ? " completed" : ""}${selected === step ? " active" : ""}`);
-      button.type = "button";
-      button.disabled = !completed;
-      button.dataset.step = String(index + 1);
-      button.setAttribute("aria-current", selected === step ? "step" : "false");
-      const text = node("span", "timeline-text");
-      text.append(node("span", "timeline-title", step.title), node("span", "timeline-meta", `${String(index + 1).padStart(2, "0")} · ${completed ? "已回放" : "等待回放"}`));
-      button.append(node("span", "timeline-index", completed ? "✓" : index + 1), text);
-      button.addEventListener("click", () => { state.selectedStep = index; renderWorkflow(); });
-      return button;
-    }));
-    $("playback-status").textContent = state.timer !== null ? "回放中" : state.revealed === steps.length && steps.length ? "回放完成" : state.revealed ? "等待下一步" : "准备就绪";
-    $("step-button").disabled = !steps.length || state.revealed >= steps.length || state.timer !== null;
-    $("run-button").disabled = !steps.length || state.revealed >= steps.length;
-    $("run-button").textContent = state.timer !== null ? "暂停回放" : "自动回放";
-    $("reset-button").disabled = !steps.length;
-    const completedCount = node("strong", "", state.revealed);
-    completedCount.id = "metric-steps";
-    completedCount.append(node("small", "", ` / ${steps.length}`));
-    $("metric-steps").replaceWith(completedCount);
-    $("metric-changes").textContent = String(steps.slice(0, state.revealed).reduce((sum, step) => sum + array(step.actual?.changes).length, 0));
-    $("metric-verification").textContent = selected ? selected.verified ? "已验证" : "已记录" : "等待回放";
-    $("metric-verification").classList.toggle("passed", !!selected?.verified);
-    $("current-kicker").textContent = selected ? `STEP ${String(state.selectedStep + 1).padStart(2, "0")}` : "READY WHEN YOU ARE";
-    $("current-title").textContent = selected?.title || "从第一步，看见业务变化";
-    $("current-description").textContent = selected ? descriptions[selected.tool_name] || "查看该步骤的预测与系统记录。" : "点击“单步回放”，查看每一步的预测与结果。";
-    $("step-tool").hidden = !selected;
-    $("step-tool").textContent = selected?.tool_name || "";
-    $("workflow-prediction").replaceChildren(selected ? changeList(selected.prediction?.changes, true) : node("p", "muted-empty", "等待第一步回放。"));
-    $("workflow-parameters").hidden = !selected;
-    $("workflow-input").textContent = selected ? JSON.stringify(selected.parameters || {}, null, 2) : "";
-    renderChanges(selected);
+  function renderDiff(event, visible) {
+    const node = $("rule-diff");
+    node.replaceChildren();
+    const show = visible && event && ["update", "retire"].includes(event.kind);
+    node.hidden = !show;
+    if (!show) return;
+    if (event.before_rule) {
+      const row = element("div", "diff-line diff-before");
+      row.append(element("span", "", "−"), element("span", "", event.before_rule.text)); node.append(row);
+    }
+    if (event.kind === "update" && event.rule) {
+      const row = element("div", "diff-line diff-after");
+      row.append(element("span", "", "+"), element("span", "", event.rule.text)); node.append(row);
+    }
   }
-  function nextStep() {
-    const total = array(state.data?.workflow?.steps).length;
-    if (state.revealed >= total) { stopAuto(); renderWorkflow(); return; }
-    state.selectedStep = state.revealed;
-    state.revealed += 1;
-    if (state.revealed >= total) stopAuto();
-    renderWorkflow();
+  function renderAction() {
+    const t = track();
+    const event = displayEvent();
+    const waiting = state.mode === "live" && state.live.status === "running" && !t.pending && t.shown >= t.events.length;
+    $("action-parameters").replaceChildren();
+    $("rule-diff").hidden = true;
+    if (!event) {
+      $("action-tool").textContent = waiting ? "MODEL CALL" : "READY TO EXPLORE";
+      $("action-title").textContent = state.view === 0 ? "先观察，再行动。" : "带着已有的记忆，继续探索。";
+      $("action-kind").textContent = "INPUT";
+      $("action-parameters").append(element("p", "empty-copy", state.view === 0 ? "每一轮展示 AI 实际选择的操作与参数。" : `已继承 ${t.initial.length} 条规则认识，等待新的观察。`));
+      $("narrative-output").textContent = waiting ? "模型正在选择下一步操作…" : state.view === 0 ? "点击「开始探索」，观察第一条规则如何形成。" : "世界已经变化。已有的规则，会被保留、修订，还是退役？";
+      $("typing-status").textContent = waiting ? "正在调用模型" : state.view === 0 ? "规则记忆从空白开始" : `从世界 ${ids[state.view - 1]} 继续`;
+      $("turn-label").textContent = `WORLD ${ids[state.view]} · READY`;
+      $("output-kind").textContent = "OBSERVATION → MEMORY";
+      return;
+    }
+    $("action-tool").textContent = event.tool;
+    $("action-title").textContent = event.title;
+    $("action-kind").textContent = kinds[event.kind] || "观察";
+    const entries = Object.entries(event.parameters || {});
+    for (const [key, value] of entries) {
+      const row = element("div", "parameter-row");
+      row.append(element("span", "parameter-key", key), element("span", "parameter-value", valueText(value)));
+      $("action-parameters").append(row);
+    }
+    if (!entries.length) $("action-parameters").append(element("p", "empty-copy", event.kind === "stop" ? "本世界探索结束，保留当前规则表。" : "本轮没有额外输入参数。"));
+    const isTyping = !!t.pending && state.focus === null;
+    $("narrative-output").textContent = isTyping ? t.pending.chars.slice(0, Math.floor(t.pending.visible)).join("") : event.narrative;
+    $("typing-status").textContent = state.focus !== null ? "正在回看已完成的探索" : isTyping ? "正在呈现探索结果" : waiting ? "模型正在选择下一步操作…" : event.kind === "stop" ? "本世界探索已完成" : ["add", "update", "retire"].includes(event.kind) ? "规则表已同步更新" : "等待下一轮探索";
+    $("turn-label").textContent = `WORLD ${ids[state.view]} · TURN ${String(event.turn).padStart(2, "0")}`;
+    $("output-kind").textContent = ["add", "update", "retire"].includes(event.kind) ? "UPDATING MEMORY" : "OBSERVING THE WORLD";
+    renderDiff(event, !isTyping);
   }
-  function bindEvents() {
-    $("mode-learning").addEventListener("click", () => setMode("learning"));
-    $("mode-workflow").addEventListener("click", () => setMode("workflow"));
-    $("model-select").addEventListener("change", (event) => { state.model = event.target.value; renderExample(); });
-    $("step-button").addEventListener("click", nextStep);
-    $("reset-button").addEventListener("click", () => { stopAuto(); state.revealed = 0; state.selectedStep = 0; renderWorkflow(); });
-    $("run-button").addEventListener("click", () => {
-      if (state.timer !== null) { stopAuto(); renderWorkflow(); return; }
-      state.timer = window.setInterval(nextStep, 1100);
-      nextStep();
+  function renderControls() {
+    if (!state.data) return;
+    const t = track();
+    const complete = isComplete(state.view);
+    const live = state.mode === "live";
+    const running = live && state.live.status === "running";
+    const presenting = live && state.live.completed.includes(ids[state.view]) && !complete;
+    const viewingPast = state.focus !== null && state.focus !== t.shown - 1;
+    explorer.dataset.mode = state.mode;
+    explorer.dataset.world = ids[state.view];
+    explorer.dataset.playing = String(live ? running || !!t.pending : state.playing);
+    explorer.dataset.complete = String(complete);
+    explorer.dataset.eventIndex = String(t.pending?.index ?? t.shown - 1);
+    explorer.classList.toggle("is-playing", live ? running || !!t.pending : state.playing);
+    explorer.classList.toggle("typing", !!t.pending && state.focus === null);
+    explorer.classList.toggle("reviewing", viewingPast);
+    ids.forEach((id, index) => {
+      const button = $("world-" + id);
+      button.disabled = !canSelect(index) || (running && index !== ids.indexOf(state.live.info?.world));
+      button.setAttribute("aria-selected", String(index === state.view));
+      button.classList.toggle("complete", isComplete(index));
+      button.querySelector(".world-indicator").textContent = isComplete(index) ? "✓" : String(index + 1).padStart(2, "0");
     });
-    $("changes-toggle").addEventListener("click", () => { state.allChanges = !state.allChanges; renderWorkflow(); });
+    $("mode-replay").setAttribute("aria-pressed", String(!live));
+    $("mode-live").setAttribute("aria-pressed", String(live));
+    $("world-name").textContent = `世界 ${ids[state.view]}`;
+    $("world-status").textContent = viewingPast ? "回看记录" : complete ? "已完成" : live ? state.live.error ? "探索中断" : running ? "探索中" : "准备开始" : state.playing ? "探索中" : t.shown || t.pending ? "已暂停" : "准备开始";
+    $("world-progress").textContent = `${t.shown} / ${live && !state.live.completed.includes(ids[state.view]) ? "…" : t.events.length}`;
+    $("progress-fill").style.width = `${complete ? 100 : t.events.length ? t.shown / t.events.length * 100 : 0}%`;
+    $("play-button").disabled = live ? !state.live.ready || state.live.busy || running || presenting || state.live.status === "failed" || complete : complete;
+    $("play-button").textContent = live ? running ? "正在探索…" : presenting ? "正在呈现结果…" : state.live.busy ? "正在连接…" : complete ? "本世界已完成" : "开始实时探索 ↗" : complete ? "本世界已完成" : state.playing ? "暂停" : t.shown || t.pending ? "继续探索 ↗" : "开始探索 ↗";
+    $("step-button").disabled = live || complete;
+    $("speed-select").disabled = false;
+    $("restart-button").disabled = live && (running || state.live.busy || !state.live.connected);
+    $("next-world").disabled = !complete || state.view === 3;
+    $("next-world").textContent = state.view === 3 ? "四个世界探索完成 ✓" : `进入世界 ${ids[state.view + 1]} →`;
+    $("model-label").textContent = live ? "探索模型" : "回放模型";
+    $("recorded-model").hidden = live && state.live.connected;
+    $("recorded-model").textContent = live ? "等待连接" : state.data.model === "deepseek-v4-pro" ? "DeepSeek V4 Pro" : state.data.model;
+    $("model-select").hidden = !live || !state.live.connected;
+    $("model-select").disabled = running || state.live.cursor > 0 || state.live.busy;
+    $("mode-caption").textContent = live ? state.live.connected ? "模型 API · ServiceNow" : "连接本地后端" : "真实探索记录 · 逐字回放";
+    $("live-connection").hidden = !live || state.live.connected;
+    $("source-caption").textContent = live ? "实时探索 · 独立运行" : `四世界探索记录 · Run ${String(state.data.source?.repetition || 1).padStart(2, "0")}`;
+    $("memory-caption").textContent = state.view === 3 ? "↳ 四个世界，共用一份持续维护的规则记忆。" : "↳ 本世界的规则记忆将带入下一个世界。";
   }
-  async function load() {
+  function render() {
+    if (!state.data) return;
+    renderControls(); renderAction(); renderMemory(); renderHistory();
+  }
+  function cancelAnimation() {
+    if (state.frame !== null) cancelAnimationFrame(state.frame);
+    clearTimeout(state.delay);
+    state.frame = state.delay = null;
+  }
+  function pause() {
+    state.playing = false; cancelAnimation();
+    if (track()?.pending) track().pending.last = null;
+  }
+  function finishEvent() {
+    const t = track();
+    if (!t.pending) return;
+    t.shown = t.pending.index + 1; t.pending = null;
+    if (state.mode === "replay" && isComplete(state.view)) state.playing = false;
+    render();
+  }
+  function pump() {
+    state.frame = null;
+    state.delay = null;
+    if (!state.data) return;
+    const t = track();
+    if (state.mode === "replay" && !state.playing) return;
+    if (!t.pending) {
+      if (t.shown >= t.events.length) { renderControls(); return; }
+      const event = t.events[t.shown];
+      t.pending = {index: t.shown, chars: Array.from(event.narrative || ""), visible: 0, last: null};
+      state.focus = null; render();
+    }
+    if (reducedMotion.matches) {
+      finishEvent(); state.delay = setTimeout(pump, 100); return;
+    }
+    function tick(time) {
+      const p = t.pending;
+      if (!p || (state.mode === "replay" && !state.playing)) return;
+      if (p.last !== null) p.visible = Math.min(p.chars.length, p.visible + (time - p.last) * 0.028 * speed());
+      p.last = time;
+      $("narrative-output").textContent = p.chars.slice(0, Math.floor(p.visible)).join("");
+      if (p.visible >= p.chars.length) {
+        finishEvent(); state.frame = null;
+        state.delay = setTimeout(pump, 280 / speed());
+      } else state.frame = requestAnimationFrame(tick);
+    }
+    state.frame = requestAnimationFrame(tick);
+  }
+  function selectWorld(index) {
+    if (!canSelect(index)) return;
+    pause(); state.view = index; state.focus = null; render();
+    if (state.mode === "live") pump();
+  }
+  function step() {
+    if (state.mode !== "replay" || !state.data || isComplete(state.view)) return;
+    pause(); state.focus = null;
+    const t = track();
+    if (t.pending) finishEvent();
+    else if (t.shown < t.events.length) { t.shown += 1; render(); }
+  }
+  async function api(path, payload) {
+    const options = {credentials: "same-origin", signal: AbortSignal.timeout(15000)};
+    if (payload !== undefined) {
+      options.method = "POST";
+      options.headers = {"Content-Type": "application/json", "X-CSRF-Token": state.live.csrf};
+      options.body = JSON.stringify(payload);
+    }
+    const response = await fetch(path, options);
+    let result;
+    try { result = await response.json(); } catch { throw new Error("服务暂时没有响应，请检查本地探索服务。"); }
+    if (!response.ok) throw new Error(result.message || (typeof result.error === "string" ? result.error : result.error?.message) || "探索请求未完成，请检查后端状态。");
+    return result;
+  }
+  function applyStatus(info) {
+    const live = state.live;
+    live.info = {...live.info, ...info};
+    if ("ready" in info) live.ready = Boolean(info.ready);
+    live.status = info.status || "idle";
+    live.completed = info.completed_worlds || [];
+    if ("session_id" in info) live.session = info.session_id;
+    if (info.session_id && info.model) {
+      live.model = info.model;
+      $("model-select").value = live.model;
+    }
+    if (info.csrf_token) live.csrf = info.csrf_token;
+    if (info.error) { live.error = typeof info.error === "string" ? info.error : info.error.message || "本次探索中断，请重新开始。"; if (state.mode === "live") error(live.error); }
+    else if (info.status !== "failed") { live.error = ""; if (state.mode === "live") error(); }
+    // An untouched next world inherits exactly the previous completed snapshot.
+    for (let i = 1; i < 4; i++) {
+      const previous = live.tracks[i - 1], next = live.tracks[i];
+      if (live.completed.includes(ids[i - 1])) next.initial = previous.events.at(-1)?.snapshot || previous.initial;
+    }
+  }
+  async function pollLive() {
+    const live = state.live;
+    if (live.polling || !live.connected) return;
+    live.polling = true;
+    let pollAgain = false;
     try {
-      const response = await fetch("./data/demo.json", { credentials: "omit" });
-      if (!response.ok) throw new Error(`读取演示数据失败（${response.status}）`);
-      const data = await response.json();
-      if (!array(data.models).length || !array(data.workflow?.steps).length) throw new Error("演示数据不完整，请刷新页面。");
-      state.data = data;
-      state.model = data.models.some((model) => model.id === data.default_model) ? data.default_model : data.models[0].id;
-      $("model-select").replaceChildren(...data.models.map((model) => {
-        const option = node("option", "", model.label);
-        option.value = model.id;
-        return option;
-      }));
-      $("model-select").value = state.model;
-      $("model-select").disabled = false;
-      bindEvents();
-      renderRules();
-      renderExample();
-      renderWorkflow();
-      document.documentElement.dataset.ready = "true";
-    } catch (error) {
-      $("load-error").textContent = error.message || "演示数据加载失败，请刷新页面。";
-      $("load-error").hidden = false;
-      $("learning-status").textContent = "加载失败";
+      const data = await api(`/api/exploration/events?after=${live.cursor}`);
+      if (data.reset_required || (live.session && live.session !== data.session_id)) {
+        if (state.mode === "live") cancelAnimation();
+        live.tracks = ids.map(() => makeTrack()); live.cursor = 0;
+        live.session = data.session_id;
+        if (state.mode === "live") { state.view = 0; state.focus = null; }
+        applyStatus(data);
+        live.restoreBefore = Math.max(0, ids.indexOf(data.world));
+        pollAgain = true;
+        render();
+        return;
+      }
+      const fresh = data.events || [];
+      for (const event of fresh) {
+        const index = ids.indexOf(event.world || data.world);
+        if (index >= 0) live.tracks[index].events.push(event);
+      }
+      live.cursor = data.cursor ?? live.cursor;
+      applyStatus(data);
+      if (live.restoreBefore !== null) {
+        for (let i = 0; i < live.restoreBefore; i++) {
+          if (live.completed.includes(ids[i])) {
+            live.tracks[i].shown = live.tracks[i].events.length;
+            live.tracks[i].pending = null;
+          }
+        }
+        if (state.mode === "live") state.view = live.restoreBefore;
+        live.restoreBefore = null;
+      }
+      if (state.mode === "live") {
+        renderControls();
+        if (!state.frame && !state.delay) pump();
+        if (!track().pending) render();
+      }
+    } catch (reason) {
+      if (state.mode === "live") error(reason.message);
+    } finally {
+      live.polling = false;
+      clearTimeout(live.poll);
+      if (pollAgain || live.status === "running" || live.busy) live.poll = setTimeout(pollLive, pollAgain ? 10 : 700);
     }
   }
-  load();
+  async function connectLive() {
+    if (location.hostname.endsWith("github.io")) { render(); return; }
+    try {
+      const info = await api("/api/exploration/status");
+      const live = state.live;
+      if (!info.session_id || (live.session && live.session !== info.session_id)) {
+        if (state.mode === "live") { cancelAnimation(); state.view = 0; state.focus = null; }
+        live.tracks = ids.map(() => makeTrack()); live.cursor = 0;
+        live.error = ""; live.restoreBefore = null;
+      }
+      live.connected = true; applyStatus(info);
+      const options = info.models || info.model_options || [];
+      $("model-select").replaceChildren();
+      for (const model of options) {
+        const option = element("option", "", typeof model === "string" ? model : model.label || model.id);
+        option.value = typeof model === "string" ? model : model.id;
+        $("model-select").append(option);
+      }
+      if (info.session_id) live.model = info.model;
+      else live.model ||= info.model || $("model-select").value;
+      $("model-select").value = live.model;
+      if (live.cursor === 0 && info.session_id && ids.includes(info.world)) live.restoreBefore = ids.indexOf(info.world);
+      if (!live.ready && state.mode === "live") error("实时探索配置尚未就绪，请检查本地服务的模型和实例配置。");
+      await pollLive();
+    } catch {
+      state.live.connected = false;
+      if (state.mode === "live") error("启动本地探索服务后，即可开始实时探索。");
+    }
+    render();
+  }
+  async function startLive() {
+    const live = state.live;
+    if (!live.ready || live.busy || live.status === "running" || live.completed.includes(ids[state.view])) return;
+    live.busy = true; error(); renderControls();
+    try {
+      const info = await api("/api/exploration/start", {world: ids[state.view], model: live.model});
+      applyStatus(info);
+      if (state.mode === "live") state.focus = null;
+      clearTimeout(live.poll); await pollLive();
+    } catch (reason) { error(reason.message); }
+    finally { live.busy = false; renderControls(); }
+  }
+  async function restart() {
+    pause(); state.focus = null;
+    if (state.mode === "replay") {
+      state.replay = state.data.worlds.map((world) => makeTrack(world.events, world.initial_rules));
+      state.view = 0; error(); render(); return;
+    }
+    const live = state.live;
+    if (live.status === "running" || !live.connected || live.busy) return;
+    live.busy = true; renderControls();
+    try {
+      const info = await api("/api/exploration/reset", {});
+      clearTimeout(live.poll); live.tracks = ids.map(() => makeTrack()); live.cursor = 0;
+      live.error = ""; live.session = info.session_id; applyStatus(info);
+      if (state.mode === "live") { state.view = 0; error(); }
+    } catch (reason) { error(reason.message); }
+    finally { live.busy = false; render(); }
+  }
+  const views = {replay: 0, live: 0};
+  async function setMode(mode) {
+    if (state.mode === mode || !state.data) return;
+    views[state.mode] = state.view; pause(); state.mode = mode; state.view = views[mode]; state.focus = null;
+    error(); render();
+    if (mode === "live") await connectLive();
+  }
+  $("mode-replay").addEventListener("click", () => setMode("replay"));
+  $("mode-live").addEventListener("click", () => setMode("live"));
+  ids.forEach((id, index) => $("world-" + id).addEventListener("click", () => selectWorld(index)));
+  $("play-button").addEventListener("click", () => {
+    if (state.mode === "live") { startLive(); return; }
+    if (state.playing) { pause(); renderControls(); return; }
+    if (isComplete(state.view)) return;
+    state.focus = null; state.playing = true; cancelAnimation(); pump(); renderControls();
+  });
+  $("step-button").addEventListener("click", step);
+  $("restart-button").addEventListener("click", restart);
+  $("next-world").addEventListener("click", () => { if (isComplete(state.view) && state.view < 3) selectWorld(state.view + 1); });
+  $("model-select").addEventListener("change", () => { state.live.model = $("model-select").value; });
+  document.addEventListener("visibilitychange", () => { if (document.hidden && state.mode === "replay" && state.playing) { pause(); renderControls(); } });
+  async function initialize() {
+    try {
+      const response = await fetch("./data/exploration.json", {credentials: "omit"});
+      if (!response.ok) throw new Error("无法读取探索记录，请刷新页面重试。");
+      const data = await response.json();
+      if (data.schema !== "cda.exploration.v1" || data.worlds?.map(w => w.id).join("") !== "ABCD") throw new Error("探索记录格式不匹配。");
+      state.data = data;
+      state.replay = data.worlds.map((world) => makeTrack(world.events, world.initial_rules));
+      render();
+    } catch (reason) { error(reason.message); }
+  }
+  initialize();
 })();
